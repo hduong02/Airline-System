@@ -39,6 +39,7 @@ public class Flight {
     private Long arrivalAirportId;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private FlightStatus status = FlightStatus.SCHEDULED;
 
     @CreatedDate

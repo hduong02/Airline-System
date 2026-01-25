@@ -21,6 +21,7 @@
         <module>location-service</module>
         <module>airline-service</module>
         <module>flight-service</module>
+        <module>pricing-service</module>
     </modules>
 
 

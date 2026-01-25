@@ -63,8 +63,10 @@ public class Aircraft {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
     private AircraftStatus status = AircraftStatus.ACTIVE;
 
+    @Builder.Default
     private Boolean isAvailable = true;
 
     @ManyToOne(fetch = FetchType.LAZY)

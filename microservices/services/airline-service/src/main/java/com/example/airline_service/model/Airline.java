@@ -46,6 +46,7 @@ public class Airline {
     private String website;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private AirlineStatus status = AirlineStatus.ACTIVE;
 
     private String alliance;
