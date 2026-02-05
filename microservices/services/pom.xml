@@ -22,6 +22,7 @@
         <module>airline-service</module>
         <module>flight-service</module>
         <module>pricing-service</module>
+        <module>seat-service</module>
     </modules>
 
 

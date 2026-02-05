@@ -1,0 +1,15 @@
+server:
+  port: 5007
+
+spring:
+  application:
+    name: seat-service
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/airline_seat_db
+    username: root
+    password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update
+  
