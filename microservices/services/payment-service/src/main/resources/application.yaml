@@ -1,0 +1,20 @@
+server:
+  port: 5010
+
+spring:
+  application:
+    name: payment-service
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/airline_payment_db
+    username: root
+    password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+stripe:
+  api:
+    key: ${STRIPE_API_KEY}
+  callback:
+    base-url: http://localhost:5173
