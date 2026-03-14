@@ -5,10 +5,11 @@ import java.util.List;
 import com.example.enums.BookingStatus;
 import com.example.payload.request.BookingRequest;
 import com.example.payload.response.BookingResponse;
+import com.example.payload.response.PaymentInitiateResponse;
 
 public interface BookingService {
 
-        BookingResponse createBooking(BookingRequest request, Long userId)
+        PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
                         throws Exception;
 
         BookingResponse updateBooking(Long id, BookingRequest request)

@@ -12,6 +12,8 @@ import com.example.flight_service.mapper.FlightMapper;
 import com.example.flight_service.model.Flight;
 import com.example.flight_service.repository.FlightRepository;
 import com.example.flight_service.service.FlightService;
+import com.example.flight_service.client.AirlineClient;
+import com.example.flight_service.client.LocationClient;
 import com.example.payload.request.FlightRequest;
 import com.example.payload.response.AircraftResponse;
 import com.example.payload.response.AirlineResponse;
@@ -25,6 +27,9 @@ import com.example.payload.response.FlightResponse;
 public class FlightServiceImpl implements FlightService {
 
     private final FlightRepository flightRepository;
+    private final AirlineClient airlineClient;
+    private final LocationClient locationClient;
+    
 
     @Override
     public FlightResponse createFlight(Long airlineId, FlightRequest request) throws Exception {
@@ -36,7 +41,7 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = FlightMapper.toEntity(request);
         flight.setAirlineId(airlineId);
         Flight saved = flightRepository.save(flight);
-        return getFlightResponse(saved);
+        return convertToFlightResponse(saved);
     }
 
     @Override
@@ -45,7 +50,7 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Flight not found with id: " + id));
 
-        return getFlightResponse(flight);
+        return convertToFlightResponse(flight);
     }
 
     @Override
@@ -58,7 +63,7 @@ public class FlightServiceImpl implements FlightService {
                 departureAirportId,
                 arrivalAirportId,
                 pageable
-        ).map(this::getFlightResponse);
+        ).map(this::convertToFlightResponse);
     }
 
     @Override
@@ -74,7 +79,7 @@ public class FlightServiceImpl implements FlightService {
 
         FlightMapper.updateEntity(request, existing);
         Flight saved = flightRepository.save(existing);
-        return getFlightResponse(saved);
+        return convertToFlightResponse(saved);
     }
 
     @Override
@@ -83,7 +88,7 @@ public class FlightServiceImpl implements FlightService {
                 .orElseThrow(() -> new Exception("Flight not found with id: " + id));
         flight.setStatus(status);
         Flight updated = flightRepository.save(flight);
-        return getFlightResponse(updated);
+        return convertToFlightResponse(updated);
     }
 
     @Override
@@ -93,20 +98,20 @@ public class FlightServiceImpl implements FlightService {
         flightRepository.delete(flight);
     }
 
-    private FlightResponse getFlightResponse(Flight flight) {
-        AircraftResponse aircraft = AircraftResponse.builder()
-                .id(flight.getAircraftId())
-                .build();
-        AirlineResponse airline = AirlineResponse.builder()
-                .id(flight.getAirlineId())
-                .build();
-        AirportResponse departureAirport = AirportResponse.builder()
-                .id(flight.getDepartureAirportId())
-                .build();
-        AirportResponse arrivalAirport = AirportResponse.builder()
-                .id(flight.getArrivalAirportId())
-                .build();
-        return FlightMapper.toResponse(flight, aircraft, airline,
-                departureAirport, arrivalAirport);
+    private FlightResponse convertToFlightResponse(Flight flight) {
+        //service to service communication
+        
+        AircraftResponse aircraft = airlineClient.getAircraftById(flight.getAircraftId());
+        AirlineResponse airline = airlineClient.getAirlineById(flight.getAirlineId());
+        AirportResponse departureAirport = locationClient.getAirportById(
+                flight.getDepartureAirportId());
+        AirportResponse arrivalAirport = locationClient.getAirportById(
+                flight.getArrivalAirportId());
+        return FlightMapper.toResponse(
+                flight,
+                aircraft,
+                airline,
+                departureAirport,
+                arrivalAirport);
     }
 }

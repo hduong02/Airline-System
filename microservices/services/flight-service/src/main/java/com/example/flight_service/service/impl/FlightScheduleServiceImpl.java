@@ -1,6 +1,7 @@
 package com.example.flight_service.service.impl;
 
 import com.example.enums.FlightStatus;
+import com.example.flight_service.client.LocationClient;
 import com.example.flight_service.mapper.FlightScheduleMapper;
 import com.example.flight_service.model.Flight;
 import com.example.flight_service.model.FlightSchedule;
@@ -31,6 +32,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     private final FlightScheduleRepository flightScheduleRepository;
     private final FlightRepository flightRepository;
     private final FlightInstanceService flightInstanceService;
+    private final LocationClient locationClient;
 
     @Override
     public FlightScheduleResponse createFlightSchedule(Long airlineId,
@@ -69,7 +71,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
                 flightInstanceService.createFlightInstance(airlineId, flightInstanceRequest);
             }
         }
-        return getFlightScheduleResponse(savedSchedule);
+        return convertToFlightScheduleResponse(savedSchedule);
     }
 
     @Override
@@ -78,7 +80,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         FlightSchedule schedule = flightScheduleRepository.findById(id)
                 .orElseThrow(() -> new Exception(
                         "Flight schedule not found with id: " + id));
-        return getFlightScheduleResponse(schedule);
+        return convertToFlightScheduleResponse(schedule);
     }
 
     @Override
@@ -88,7 +90,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         return schedules.stream().map(
                 schedule -> {
                     try {
-                        return getFlightScheduleResponse(schedule);
+                        return convertToFlightScheduleResponse(schedule);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -108,7 +110,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         FlightScheduleMapper.updateEntity(request, existingSchedule);
         FlightSchedule updated = flightScheduleRepository.save(existingSchedule);
         
-        return getFlightScheduleResponse(updated);
+        return convertToFlightScheduleResponse(updated);
     }
 
 
@@ -121,16 +123,14 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         flightScheduleRepository.delete(schedule);
     }
 
-    public FlightScheduleResponse getFlightScheduleResponse(
+    public FlightScheduleResponse convertToFlightScheduleResponse(
             FlightSchedule schedule) throws Exception {
         
-        AirportResponse arrivalAirport = AirportResponse.builder()
-                .id(schedule.getArrivalAirportId())
-                .build();
-
-        AirportResponse departureAirport = AirportResponse.builder()
-                .id(schedule.getDepartureAirportId())
-                .build();
+        //fetch airport data from location service
+        AirportResponse arrivalAirport = locationClient.getAirportById(
+                schedule.getArrivalAirportId());
+        AirportResponse departureAirport = locationClient.getAirportById(
+                schedule.getDepartureAirportId());
 
         return FlightScheduleMapper.toResponse(schedule, arrivalAirport, departureAirport);
     }

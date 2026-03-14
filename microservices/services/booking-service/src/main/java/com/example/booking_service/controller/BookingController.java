@@ -10,6 +10,7 @@ import com.example.booking_service.service.BookingService;
 import com.example.enums.BookingStatus;
 import com.example.payload.request.BookingRequest;
 import com.example.payload.response.BookingResponse;
+import com.example.payload.response.PaymentInitiateResponse;
 
 import java.util.List;
 
@@ -21,13 +22,15 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    public ResponseEntity<BookingResponse> createBooking(
+    public ResponseEntity<PaymentInitiateResponse> createBooking(
             @Valid @RequestBody BookingRequest request,
             @RequestHeader("X-User-Id") Long userId)
-            throws Exception {
-        BookingResponse response = bookingService.createBooking(request, userId);
+            throws Exception
+        {
+        PaymentInitiateResponse response = bookingService.createBooking(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(

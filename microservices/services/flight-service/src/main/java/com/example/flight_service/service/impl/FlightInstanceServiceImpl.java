@@ -1,5 +1,7 @@
 package com.example.flight_service.service.impl;
 
+import com.example.flight_service.client.AirlineClient;
+import com.example.flight_service.client.LocationClient;
 import com.example.flight_service.mapper.FlightInstanceMapper;
 import com.example.flight_service.model.Flight;
 import com.example.flight_service.model.FlightInstance;
@@ -28,6 +30,8 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     private final FlightInstanceRepository flightInstanceRepository;
     private final FlightRepository flightRepository;
+    private final AirlineClient airlineClient;
+    private final LocationClient locationClient;
 
     @Override
     public FlightInstanceResponse createFlightInstance(Long airlineId,
@@ -35,12 +39,10 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new Exception("Flight not found"));
+        
+        //get aircraft data from airline service
+        AircraftResponse aircraft = airlineClient.getAircraftById(flight.getAircraftId());
 
-        AircraftResponse aircraft = AircraftResponse
-                .builder()
-                .id(1L)
-                .totalSeats(90)
-                .build();
         FlightInstance instance = FlightInstanceMapper.toEntity(request, flight);
         instance.setAirlineId(airlineId);
         instance.setFlight(flight);
@@ -51,7 +53,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
         FlightInstance saved = flightInstanceRepository.save(instance);
 
-        return getFlightInstanceResponse(saved);
+        return convertToFlightInstanceResponse(saved);
     }
 
 
@@ -61,16 +63,18 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Flight instance not found with id: " + id));
 
-        return getFlightInstanceResponse(fi);
+        return convertToFlightInstanceResponse(fi);
     }
 
     @Override
-    public Page<FlightInstanceResponse> getByAirlineId(Long airlineId,
-                                                        Long departureAirportId,
-                                                        Long arrivalAirportId,
-                                                        Long flightId,
-                                                        LocalDate onDate,
-                                                        Pageable pageable) {
+    public Page<FlightInstanceResponse> getByAirlineId(
+            Long airlineId,
+            Long departureAirportId,
+            Long arrivalAirportId,
+            Long flightId,
+            LocalDate onDate,
+            Pageable pageable)
+        {
         LocalDateTime start = onDate != null ? onDate.atStartOfDay() : null;
         LocalDateTime end   = onDate != null ? onDate.plusDays(1).atStartOfDay() : null;
 
@@ -78,7 +82,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
                 airlineId, departureAirportId, arrivalAirportId, flightId, start, end, pageable
         ).map(fi -> {
             try {
-                return getFlightInstanceResponse(fi);
+                return convertToFlightInstanceResponse(fi);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -92,7 +96,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Flight instance not found with id: " + id));
         FlightInstanceMapper.updateEntity(request, existing);
-        return getFlightInstanceResponse(flightInstanceRepository.save(existing));
+        return convertToFlightInstanceResponse(flightInstanceRepository.save(existing));
     }
 
     @Override
@@ -104,19 +108,18 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
 
-    private FlightInstanceResponse getFlightInstanceResponse(FlightInstance fi) throws Exception {
-        AirlineResponse airline = AirlineResponse.builder()
-                .id(fi.getAirlineId())
-                .build();
-        AirportResponse departureAirport = AirportResponse.builder()
-                .id(fi.getDepartureAirportId())
-                .build();
-        AirportResponse arrivalAirport = AirportResponse.builder()
-                .id(fi.getArrivalAirportId())
-                .build();
-        AircraftResponse aircraftResponse = AircraftResponse.builder()
-                .id(fi.getFlight().getAircraftId())
-                .build();
+    private FlightInstanceResponse convertToFlightInstanceResponse(
+            FlightInstance fi) throws Exception {
+        
+        //service to service communication
+        AirlineResponse airline = airlineClient.getAirlineById(fi.getAirlineId());
+        AirportResponse departureAirport = locationClient.getAirportById(
+                fi.getDepartureAirportId());
+        AirportResponse arrivalAirport = locationClient.getAirportById(
+                fi.getArrivalAirportId());
+        AircraftResponse aircraftResponse = airlineClient.getAircraftById(
+                fi.getFlight().getAircraftId());
+                
         return FlightInstanceMapper.toResponse(
                 fi,
                 aircraftResponse,
