@@ -21,10 +21,10 @@ public class FlightScheduleController {
 
     @PostMapping
     public ResponseEntity<FlightScheduleResponse> createFlightSchedule(
-            @RequestHeader("X-Airline-Id") Long airlineId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody FlightScheduleRequest request) throws Exception {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                flightScheduleService.createFlightSchedule(airlineId, request));
+                flightScheduleService.createFlightSchedule(userId, request));
     }
 
     @GetMapping("/{id}")
@@ -34,12 +34,8 @@ public class FlightScheduleController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getFlightSchedules(
-            @RequestHeader("X-Airline-Id") Long airlineId
-    ) {
-        return ResponseEntity.ok(
-                flightScheduleService.getFlightScheduleByAirline(airlineId)
-        );
+    public ResponseEntity<?> getFlightSchedules(@RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(flightScheduleService.getFlightScheduleByAirline(userId));
     }
 
 
@@ -51,7 +47,8 @@ public class FlightScheduleController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteFlightSchedule(@PathVariable Long id) throws Exception {
+    public ResponseEntity<ApiResponse> deleteFlightSchedule(@PathVariable Long id)
+            throws Exception {
         flightScheduleService.deleteFlightSchedule(id);
         return ResponseEntity.noContent().build();
     }

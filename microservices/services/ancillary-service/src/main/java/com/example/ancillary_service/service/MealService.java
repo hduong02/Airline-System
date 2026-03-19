@@ -11,9 +11,9 @@ public interface MealService {
 
     MealResponse getMealById(Long id) throws Exception;
 
-    List<MealResponse> getByAirlineId(Long airlineId);
+    List<MealResponse> getByAirlineId(Long userId);
 
-    MealResponse updateMeal(Long airlineId, Long id, MealRequest request) throws Exception;
+    MealResponse updateMeal(Long userId, Long id, MealRequest request) throws Exception;
 
     void deleteMeal(Long id) throws Exception;
 

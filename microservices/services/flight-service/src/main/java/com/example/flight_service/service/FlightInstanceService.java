@@ -16,7 +16,7 @@ public interface FlightInstanceService {
 
     FlightInstanceResponse getFlightInstanceById(Long id) throws Exception;
 
-    Page<FlightInstanceResponse> getByAirlineId(Long airlineId,
+    Page<FlightInstanceResponse> getByAirlineId(Long userId,
                                                 Long departureAirportId,
                                                 Long arrivalAirportId,
                                                 Long flightId,

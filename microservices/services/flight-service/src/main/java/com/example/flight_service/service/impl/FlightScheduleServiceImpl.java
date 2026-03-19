@@ -1,6 +1,7 @@
 package com.example.flight_service.service.impl;
 
 import com.example.enums.FlightStatus;
+import com.example.flight_service.client.AirlineClient;
 import com.example.flight_service.client.LocationClient;
 import com.example.flight_service.mapper.FlightScheduleMapper;
 import com.example.flight_service.model.Flight;
@@ -11,6 +12,7 @@ import com.example.flight_service.service.FlightInstanceService;
 import com.example.flight_service.service.FlightScheduleService;
 import com.example.payload.request.FlightInstanceRequest;
 import com.example.payload.request.FlightScheduleRequest;
+import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.AirportResponse;
 import com.example.payload.response.FlightScheduleResponse;
 
@@ -33,10 +35,13 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     private final FlightRepository flightRepository;
     private final FlightInstanceService flightInstanceService;
     private final LocationClient locationClient;
+    private final AirlineClient airlineClient;
 
     @Override
-    public FlightScheduleResponse createFlightSchedule(Long airlineId,
+    public FlightScheduleResponse createFlightSchedule(Long userId,
                 FlightScheduleRequest request) throws Exception {
+        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
+        
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new Exception(
                         "Flight not found with id: " + request.getFlightId()));
@@ -68,7 +73,8 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
                 flightInstanceRequest.setArrivalDateTime(
                         LocalDateTime.of(date, schedule.getArrivalTime()));
 
-                flightInstanceService.createFlightInstance(airlineId, flightInstanceRequest);
+                flightInstanceService.createFlightInstance(airlineResponse.getId(),
+                        flightInstanceRequest);
             }
         }
         return convertToFlightScheduleResponse(savedSchedule);
@@ -84,9 +90,11 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     }
 
     @Override
-    public List<FlightScheduleResponse> getFlightScheduleByAirline(Long airlineId) {
+    public List<FlightScheduleResponse> getFlightScheduleByAirline(Long userId) {
+        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
+        
         List<FlightSchedule> schedules = flightScheduleRepository
-                .findByFlightAirlineId(airlineId);
+                .findByFlightAirlineId(airlineResponse.getId());
         return schedules.stream().map(
                 schedule -> {
                     try {

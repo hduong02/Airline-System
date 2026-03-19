@@ -18,7 +18,7 @@ public interface BookingService {
         BookingResponse getBookingById(Long id) throws Exception;
 
         List<BookingResponse> getAllBookingsByAirline(
-                        Long airlineId,
+                        Long userId,
                         String searchQuery,
                         BookingStatus status,
                         Long flightInstanceId,

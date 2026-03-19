@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import com.example.booking_service.client.AirlineClient;
 import com.example.booking_service.client.AncillaryClient;
 import com.example.booking_service.client.FlightClient;
 import com.example.booking_service.client.PaymentClient;
@@ -22,6 +23,7 @@ import com.example.payload.dto.PaymentDto;
 import com.example.payload.request.BookingRequest;
 import com.example.payload.request.PassengerRequest;
 import com.example.payload.request.PaymentInitiateRequest;
+import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.BookingResponse;
 import com.example.payload.response.FareResponse;
 import com.example.payload.response.FlightCabinAncillaryResponse;
@@ -50,6 +52,7 @@ public class BookingServiceImpl implements BookingService {
     private final AncillaryClient ancillaryClient;
     private final FareIntegrationService fareIntegrationService;
     private final PaymentClient paymentClient;
+    private final AirlineClient airlineClient;
 
     @Override
     public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
@@ -132,18 +135,20 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponse> getAllBookingsByAirline(
-            Long airlineId,
+            Long userId,
             String searchQuery,
             BookingStatus status,
             Long flightInstanceId,
             String sortDirection)
     {
+        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
+        
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection) ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Sort sort = Sort.by(direction, Booking::getBookingDate);
 
         List<Booking> bookings = bookingRepository.findByAirlineWithFilters(
-                airlineId, searchQuery, status, flightInstanceId, sort);
+                airlineResponse.getId(), searchQuery, status, flightInstanceId, sort);
 
         return bookings.stream()
                 .map(this::convertToBookingResponse)

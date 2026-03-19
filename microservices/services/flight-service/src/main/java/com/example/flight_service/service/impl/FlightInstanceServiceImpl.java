@@ -34,17 +34,16 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     private final LocationClient locationClient;
 
     @Override
-    public FlightInstanceResponse createFlightInstance(Long airlineId,
+    public FlightInstanceResponse createFlightInstance(Long userId,
             FlightInstanceRequest request) throws Exception {
-
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new Exception("Flight not found"));
-        
-        //get aircraft data from airline service
+
+        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
         AircraftResponse aircraft = airlineClient.getAircraftById(flight.getAircraftId());
 
         FlightInstance instance = FlightInstanceMapper.toEntity(request, flight);
-        instance.setAirlineId(airlineId);
+        instance.setAirlineId(airlineResponse.getId());
         instance.setFlight(flight);
         instance.setDepartureAirportId(request.getDepartureAirportId());
         instance.setArrivalAirportId(request.getArrivalAirportId());
@@ -68,18 +67,26 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     public Page<FlightInstanceResponse> getByAirlineId(
-            Long airlineId,
+            Long userId,
             Long departureAirportId,
             Long arrivalAirportId,
             Long flightId,
             LocalDate onDate,
             Pageable pageable)
         {
+        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
+
         LocalDateTime start = onDate != null ? onDate.atStartOfDay() : null;
         LocalDateTime end   = onDate != null ? onDate.plusDays(1).atStartOfDay() : null;
 
         return flightInstanceRepository.findByAirlineId(
-                airlineId, departureAirportId, arrivalAirportId, flightId, start, end, pageable
+                airlineResponse.getId(),
+                departureAirportId,
+                arrivalAirportId,
+                flightId,
+                start,
+                end,
+                pageable
         ).map(fi -> {
             try {
                 return convertToFlightInstanceResponse(fi);
