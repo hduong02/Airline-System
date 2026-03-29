@@ -4,7 +4,6 @@ server:
 spring:
   application:
     name: seat-service
-  
   datasource:
     url: jdbc:mysql://localhost:3306/airline_seat_db
     username: root
@@ -12,6 +11,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: seat-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      
   
   eureka:
     client:

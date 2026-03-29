@@ -1,7 +1,9 @@
 package com.example.flight_service.service.impl;
 
+import com.example.event.FlightInstanceCreatedEvent;
 import com.example.flight_service.client.AirlineClient;
 import com.example.flight_service.client.LocationClient;
+import com.example.flight_service.event.FlightInstanceEventProducer;
 import com.example.flight_service.mapper.FlightInstanceMapper;
 import com.example.flight_service.model.Flight;
 import com.example.flight_service.model.FlightInstance;
@@ -32,6 +34,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     private final FlightRepository flightRepository;
     private final AirlineClient airlineClient;
     private final LocationClient locationClient;
+    private final FlightInstanceEventProducer flightInstanceEventProducer;
 
     @Override
     public FlightInstanceResponse createFlightInstance(Long userId,
@@ -49,8 +52,15 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
         instance.setArrivalAirportId(request.getArrivalAirportId());
         instance.setTotalSeats(aircraft.getTotalSeats());
         instance.setAvailableSeats(aircraft.getTotalSeats());
-
         FlightInstance saved = flightInstanceRepository.save(instance);
+        
+        // publish kafka event, seat service consume that and create seat instance
+        FlightInstanceCreatedEvent event = FlightInstanceCreatedEvent.builder()
+                .flightInstanceId(instance.getId())
+                .aircraftId(flight.getAircraftId())
+                .flightId(flight.getId())
+                .build();
+        flightInstanceEventProducer.sendFlightInstanceCreated(event);
 
         return convertToFlightInstanceResponse(saved);
     }

@@ -16,6 +16,8 @@ import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.request.PaymentVerifyRequest;
 import com.example.payload.response.PaymentInitiateResponse;
 import com.example.payload.response.PaymentLinkResponse;
+import com.example.payment_service.client.UserClient;
+import com.example.payment_service.event.PaymentEventProducer;
 import com.example.payment_service.mapper.PaymentMapper;
 import com.example.payment_service.model.Payment;
 import com.example.payment_service.repository.PaymentRepository;
@@ -35,6 +37,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final StripeService stripeService;
+    private final PaymentEventProducer paymentEventProducer;
+    private final UserClient userClient;
 
     @Override
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request)
@@ -73,11 +77,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
 
             if (request.getGateway() == PaymentGateway.STRIPE) {
-                UserDto userDto = new UserDto();
-                userDto.setId(1L);
-                userDto.setFullName("Andy Nguyen");
-                userDto.setEmail("hoangduongvd99@gmail.com");
-                userDto.setPhone("7865437896");
+                UserDto userDto = userClient.getUserById(request.getUserId());
 
                 // create stripe payment link using stripe service
                 PaymentLinkResponse paymentLinkResponse = stripeService.createPaymentLink(
@@ -115,36 +115,40 @@ public class PaymentServiceImpl implements PaymentService {
 
             // payment_id is stored in metadata during checkout session creation
             JSONObject metadata = paymentDetails.optJSONObject("metadata");
-            if (metadata == null) {
+            if (metadata == null)
                 throw new Exception("Stripe PaymentIntent missing metadata");
-            }
+            
             paymentId = Long.parseLong(metadata.optString("payment_id"));
 
             Payment payment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new Exception(
                             "Payment not found with ID: " + paymentId));
 
-            if (isValid) {
+            if (isValid)
                 payment.setProviderPaymentId(request.getStripePaymentIntentId());
-            }
 
             return saveAndPublish(payment, isValid, status);
-
         } else {
             throw new Exception("No payment method provided");
         }
     }
 
-    /** Persists the verified payment and publishes the corresponding event. */
+    // Persists the verified payment and publishes the corresponding event
     private PaymentDto saveAndPublish(Payment payment, boolean isValid, String status) {
         if (isValid) {
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaidAt(LocalDateTime.now());
             payment = paymentRepository.save(payment);
+
+            // publish payment completed event
+            paymentEventProducer.sendPaymentCompleted(payment);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Payment verification failed");
             payment = paymentRepository.save(payment);
+
+            // publish payment failed event
+            paymentEventProducer.sendPaymentFailed(payment);
         }
 
         return PaymentMapper.toDto(payment);

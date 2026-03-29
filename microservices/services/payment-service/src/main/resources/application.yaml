@@ -19,6 +19,9 @@ spring:
     instance:
       prefer-ip-address: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
 stripe:
   api:
     key: ${STRIPE_API_KEY}
