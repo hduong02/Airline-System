@@ -4,14 +4,15 @@ import com.example.flight_service.model.FlightInstance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 
 import java.time.LocalDateTime;
 
 
-public interface FlightInstanceRepository extends JpaRepository<FlightInstance, Long> {
+public interface FlightInstanceRepository extends
+        JpaRepository<FlightInstance, Long>, JpaSpecificationExecutor<FlightInstance> {
 
     @Query("SELECT fi FROM FlightInstance fi WHERE fi.airlineId = :airlineId" +
             " AND (:departureAirportId IS NULL OR fi.departureAirportId = :departureAirportId)" +

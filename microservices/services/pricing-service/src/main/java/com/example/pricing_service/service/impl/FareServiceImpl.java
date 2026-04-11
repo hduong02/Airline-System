@@ -12,6 +12,7 @@ import com.example.pricing_service.model.Fare;
 import com.example.pricing_service.repository.FareRepository;
 import com.example.pricing_service.service.FareService;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -108,5 +109,21 @@ public class FareServiceImpl implements FareService {
                         e -> FareMapper.toResponse(e.getValue())
                 ));
         return result;
+    }
+
+
+    @Override
+    public FareResponse getLowestFareForFlightAndCabin(Long flightId, Long cabinClassId) {
+
+        List<Fare> fares = fareRepository.findByFlightIdAndCabinClassId(
+                flightId,
+                cabinClassId
+        );
+
+        Fare lowestFare = fares.stream()
+                .min(Comparator.comparingDouble(Fare::getTotalPrice))
+                .orElse(null);
+
+        return FareMapper.toResponse(lowestFare);
     }
 }
