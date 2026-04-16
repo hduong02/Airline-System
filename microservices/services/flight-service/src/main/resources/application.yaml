@@ -1,23 +1,5 @@
-server:
-  port: 5005
 spring:
   application:
     name: flight-service
-  datasource:
-    url: jdbc:mysql://localhost:3306/airline_flight_db
-    username: root
-    password: admin
-  jpa:
-    hibernate:
-      ddl-auto: update
-  kafka:
-    bootstrap-servers: localhost:9092
-    
-eureka:
-  client:
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
-
-  
+  config:
+    import: optional:configserver:http://localhost:8888

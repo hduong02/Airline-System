@@ -1,20 +1,6 @@
-server:
-  port: 5008
-
 spring:
   application:
     name: ancillary-service
-  
-  datasource:
-    url: jdbc:mysql://localhost:3306/airline_ancillary_db
-    username: root
-    password: admin
-  jpa:
-    hibernate:
-      ddl-auto: update
-  eureka:
-    client:
-      register-with-eureka: true
-      fetch-registry: true
-    instance:
-      prefer-ip-address: true
+
+  config:
+    import: optional:configserver:http://localhost:8888
