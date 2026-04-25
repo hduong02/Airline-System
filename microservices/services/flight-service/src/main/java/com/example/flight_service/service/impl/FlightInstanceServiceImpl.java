@@ -17,6 +17,9 @@ import com.example.payload.response.AirportResponse;
 import com.example.payload.response.FlightInstanceResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     private final FlightInstanceEventProducer flightInstanceEventProducer;
 
     @Override
+    @CacheEvict(cacheNames = "flightInstances", allEntries = true)
     public FlightInstanceResponse createFlightInstance(Long userId,
             FlightInstanceRequest request) throws Exception {
         Flight flight = flightRepository.findById(request.getFlightId())
@@ -67,6 +71,8 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "flightInstances", key = "#id")
     public FlightInstanceResponse getFlightInstanceById(Long id) throws Exception {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -76,6 +82,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<FlightInstanceResponse> getByAirlineId(
             Long userId,
             Long departureAirportId,
@@ -107,6 +114,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "flightInstances", key = "#id")
     public FlightInstanceResponse updateFlightInstance(Long id, FlightInstanceRequest request)
             throws Exception {
         FlightInstance existing = flightInstanceRepository.findById(id)
@@ -117,6 +125,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "flightInstances", key = "#id")
     public void deleteFlightInstance(Long id) {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(

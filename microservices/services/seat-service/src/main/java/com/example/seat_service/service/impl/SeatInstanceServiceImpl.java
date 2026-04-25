@@ -2,6 +2,7 @@ package com.example.seat_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.enums.SeatAvailabilityStatus;
 import com.example.payload.response.SeatInstanceResponse;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     private final SeatInstanceRepository seatInstanceRepository;

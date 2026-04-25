@@ -14,13 +14,13 @@ public interface AirlineService {
 
     // ----- CRUD -----
     AirlineResponse createAirline(AirlineRequest request, Long ownerId);
-    AirlineResponse getAirlineByOwner(Long ownerId);
-    AirlineResponse getAirlineById(Long id);
+    AirlineResponse getAirlineByOwner(Long ownerId) throws Exception;
+    AirlineResponse getAirlineById(Long id) throws Exception;
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
-    AirlineResponse updateAirline(AirlineRequest request, Long ownerId);
-    void deleteAirline(Long id, Long ownerId);
+    AirlineResponse updateAirline(AirlineRequest request, Long ownerId) throws Exception;
+    void deleteAirline(Long id, Long ownerId) throws Exception;
 
-    AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status);
+    AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status) throws Exception;
 
     // ----- Dropdown -----
     List<AirlineDropdownItem> getAirlinesForDropdown();

@@ -3,6 +3,7 @@ package com.example.booking_service.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.booking_service.client.AirlineClient;
 import com.example.booking_service.client.AncillaryClient;
@@ -55,6 +56,7 @@ public class BookingServiceImpl implements BookingService {
     private final AirlineClient airlineClient;
 
     @Override
+    @Transactional
     public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
             throws Exception {
         // Generate unique booking reference
@@ -120,12 +122,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingResponse updateBooking(Long id, BookingRequest request)
             throws Exception {
                 return null;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BookingResponse getBookingById(Long id) throws Exception {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new Exception(
@@ -134,6 +138,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookingsByAirline(
             Long userId,
             String searchQuery,
@@ -156,6 +161,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUser(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
                 .map(this::convertToBookingResponse)
@@ -163,6 +169,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingResponse cancelBooking(Long id) throws Exception {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new Exception(
@@ -174,6 +181,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public void deleteBooking(Long id) throws Exception {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new Exception(

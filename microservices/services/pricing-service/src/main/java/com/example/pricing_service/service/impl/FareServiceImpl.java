@@ -2,6 +2,9 @@ package com.example.pricing_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,8 @@ public class FareServiceImpl implements FareService {
 
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "fares", key = "#id")
     public FareResponse getFareById(Long id) throws Exception {
         Fare fare = fareRepository.findById(id)
                 .orElseThrow(() -> new Exception("Fare not found with id: " + id));
@@ -45,6 +50,7 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FareResponse> getFaresByFlightIdAndCabinClassId(Long flightId, Long cabinClassId) {
         return fareRepository.findByFlightIdAndCabinClassId(flightId, cabinClassId)
                 .stream()
@@ -53,6 +59,10 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "fares", key = "#id"),
+            @CacheEvict(cacheNames = "faresByFlight", allEntries = true)
+    })
     public FareResponse updateFare(Long id, FareRequest request) throws Exception {
         Fare existing = fareRepository.findById(id)
                 .orElseThrow(() -> new Exception("Fare not found with id: " + id));
@@ -69,6 +79,10 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "fares", key = "#id"),
+            @CacheEvict(cacheNames = "faresByFlight", allEntries = true)
+    })
     public void deleteFare(Long id) throws Exception{
         Fare fare = fareRepository.findById(id)
                 .orElseThrow(() -> new Exception("Fare not found with id: " + id));
@@ -81,6 +95,7 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Map<Long, FareResponse> getFaresByIds(List<Long> ids) {
         List<Fare> fares = fareRepository.findAllById(ids);
         return fares.stream()
@@ -88,6 +103,7 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Map<Long, FareResponse> getLowestFarePerFlight(
             List<Long> flightIds, Long cabinClassId) {
         if (flightIds == null || flightIds.isEmpty()) return Map.of();

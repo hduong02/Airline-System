@@ -1,0 +1,17 @@
+# =============================================================================
+# DEV INFRASTRUCTURE ONLY
+# Starts Redis + Kafka with ports exposed to localhost.
+# =============================================================================
+services:
+
+  redis:
+    image: redis:8.10-alpine
+    container_name: gds-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

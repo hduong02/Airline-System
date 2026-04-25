@@ -19,8 +19,7 @@ import com.example.seat_service.service.SeatService;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class
-SeatMapServiceImpl implements SeatMapService {
+public class SeatMapServiceImpl implements SeatMapService {
 
     private final SeatMapRepository seatMapRepository;
     private final CabinClassRepository cabinClassRepository;
@@ -57,6 +56,7 @@ SeatMapServiceImpl implements SeatMapService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public SeatMapResponse getSeatMapById(Long id) throws Exception {
         SeatMap seatMap = seatMapRepository.findById(id)
                 .orElseThrow(() -> new Exception("Seat map not found with id: " + id));
@@ -64,6 +64,7 @@ SeatMapServiceImpl implements SeatMapService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SeatMapResponse getSeatMapsByCabinClass(Long cabinClassId) {
         SeatMap seatMap = seatMapRepository.findByCabinClassId(cabinClassId);
         return SeatMapMapper.toResponse(seatMap);

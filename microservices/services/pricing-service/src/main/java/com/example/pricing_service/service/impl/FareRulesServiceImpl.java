@@ -49,6 +49,7 @@ public class FareRulesServiceImpl implements FareRulesService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FareRulesResponse getFareRulesByFareId(Long fareId) throws Exception {
         FareRules fareRules = fareRulesRepository.findByFareId(fareId)
                 .orElseThrow(() -> new Exception("Fare rules not found for fare id: " + fareId));
@@ -56,6 +57,7 @@ public class FareRulesServiceImpl implements FareRulesService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<FareRulesResponse> getFareRulesByAirlineId(Long airlineId) {
         return fareRulesRepository.findByAirlineId(airlineId).stream()
                 .map(FareRulesMapper::toResponse)

@@ -97,6 +97,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FlightInstanceCabinResponse getFlightInstanceCabinById(Long id) {
         FlightInstanceCabin fic = flightInstanceCabinRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -106,6 +107,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     
     @Override
+    @Transactional(readOnly = true)
     public Page<FlightInstanceCabinResponse> getByFlightInstanceId(
             Long flightInstanceId, Pageable pageable) {
         return flightInstanceCabinRepository.findByFlightInstanceId(flightInstanceId, pageable)
@@ -113,6 +115,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(
             Long flightInstanceId, Long cabinClassId) {
         FlightInstanceCabin cabin =

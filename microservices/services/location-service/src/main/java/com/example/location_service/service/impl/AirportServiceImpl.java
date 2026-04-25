@@ -2,6 +2,10 @@ package com.example.location_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +49,7 @@ public class AirportServiceImpl implements AirportService {
     }
 
     @Override
+    @Cacheable(cacheNames = "airports", key = "#id")
     public AirportResponse getAirportById(Long id) throws Exception {
         Airport airport = airportRepository.findById(id)
                 .orElseThrow(() -> new Exception("Airport not found with id: " + id));
@@ -53,6 +58,7 @@ public class AirportServiceImpl implements AirportService {
 
 
     @Override
+    @Cacheable(cacheNames = "allAirports")
     public List<AirportResponse> getAllAirports() {
         return airportRepository.findAll().stream()
                 .map(AirportMapper::toResponse)
@@ -60,6 +66,11 @@ public class AirportServiceImpl implements AirportService {
     }
 
     @Override
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "airports", key = "#id"),
+        @CacheEvict(cacheNames = "allAirports", allEntries = true),
+        @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
+    })
     public AirportResponse updateAirport(Long id, AirportRequest request) throws Exception {
         Airport existingAirport = airportRepository.findById(id)
                 .orElseThrow(() -> new Exception("Airport not found with id: " + id));
@@ -77,6 +88,11 @@ public class AirportServiceImpl implements AirportService {
     }
 
     @Override
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "airports", key = "#id"),
+        @CacheEvict(cacheNames = "allAirports", allEntries = true),
+        @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
+    })
     public void deleteAirport(Long id) throws Exception {
         Airport airport = airportRepository.findById(id)
                 .orElseThrow(() -> new Exception("Airport not found with id: " + id));
@@ -84,6 +100,7 @@ public class AirportServiceImpl implements AirportService {
     }
 
     @Override
+    @Cacheable(cacheNames = "airportsByCity", key = "#cityId")
     public List<AirportResponse> getAirportsByCityId(Long cityId) {
         return airportRepository.findByCityId(cityId).stream()
                 .map(AirportMapper::toResponse)

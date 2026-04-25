@@ -3,6 +3,7 @@ package com.example.booking_service.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.booking_service.model.Booking;
 import com.example.booking_service.model.Passenger;
@@ -24,6 +25,7 @@ public class TicketServiceImpl implements TicketService {
     private final TicketRepository ticketRepository;
 
     @Override
+    @Transactional
     public List<Ticket> generateTicketsForBooking(Booking booking) {
         List<Ticket> tickets = new ArrayList<Ticket>();
 

@@ -57,6 +57,7 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<FlightResponse> getFlightsByAirline(
             Long userId,
             Long departureAirportId,

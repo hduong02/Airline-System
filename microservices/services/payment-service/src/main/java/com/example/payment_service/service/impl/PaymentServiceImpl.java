@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.enums.PaymentGateway;
 import com.example.enums.PaymentStatus;
@@ -41,6 +42,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserClient userClient;
 
     @Override
+    @Transactional
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request)
             throws Exception {
         try {
@@ -96,6 +98,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public PaymentDto verifyPayment(PaymentVerifyRequest request) throws Exception {
 
         JSONObject paymentDetails;
@@ -155,12 +158,14 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PaymentDto> getAllPayments(Pageable pageable) {
         return paymentRepository.findAll(pageable)
                 .map(PaymentMapper::toDto);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Map<Long, PaymentDto> getPaymentsByBookingIds(List<Long> bookingIds) {
         if (bookingIds == null || bookingIds.isEmpty())
             return Map.of();

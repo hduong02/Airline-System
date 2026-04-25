@@ -1,7 +1,10 @@
 package com.example.airline_service.service.impl;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,17 +38,19 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     @Override
-    public AirlineResponse getAirlineByOwner(Long ownerId) {
+    @Cacheable(cacheNames = "airlinesByOwner", key = "#ownerId")
+    public AirlineResponse getAirlineByOwner(Long ownerId) throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new Exception(
                         "Airline not found for owner: " + ownerId));
         return AirlineMapper.toResponse(airline);
     }
 
     @Override
-    public AirlineResponse getAirlineById(Long id) {
+    @Cacheable(cacheNames = "airlines", key = "#id")
+    public AirlineResponse getAirlineById(Long id) throws Exception {
         Airline airline = airlineRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found"));
+                .orElseThrow(() -> new Exception("Airline not found"));
         return AirlineMapper.toResponse(airline);
     }
 
@@ -56,9 +61,16 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     @Override
-    public AirlineResponse updateAirline(AirlineRequest request, Long ownerId) {
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "airlinesByOwner", key = "#ownerId"),
+            @CacheEvict(cacheNames = "airlines", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+    })
+    public AirlineResponse updateAirline(AirlineRequest request, Long ownerId)
+            throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new Exception(
                         "Airline not found for owner: " + ownerId));
 
         AirlineMapper.updateEntity(airline, request);
@@ -66,30 +78,39 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     @Override
-    public void deleteAirline(Long id, Long ownerId) {
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "airlines", key = "#id"),
+            @CacheEvict(cacheNames = "airlinesByOwner", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+    })
+    public void deleteAirline(Long id, Long ownerId) throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new Exception(
                         "Airline not found for owner: " + ownerId));
         airlineRepository.delete(airline);
     }
 
     // ---------- Business Operations ----------
 
-
-
     @Override
-    public AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status) {
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
+            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+    })
+    public AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status)
+            throws Exception {
         Airline airline = airlineRepository.findById(airlineId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new Exception(
                         "Airline not found with ID: " + airlineId));
         airline.setStatus(status);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
     }
 
-
     // ---------- Search / Filters ----------
 
     @Override
+    @Transactional(readOnly = true)
     public List<AirlineDropdownItem> getAirlinesForDropdown() {
         return airlineRepository.findByStatus(AirlineStatus.ACTIVE).stream()
                 .map(a -> AirlineDropdownItem.builder()

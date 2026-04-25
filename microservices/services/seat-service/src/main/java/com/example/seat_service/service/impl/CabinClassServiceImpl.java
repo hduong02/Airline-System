@@ -36,6 +36,7 @@ public class CabinClassServiceImpl implements CabinClassService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CabinClassResponse getCabinClassById(Long id) throws Exception {
         CabinClass cabinClass = cabinClassRepository.findById(id)
                 .orElseThrow(() -> new Exception("Cabin class not found with id: " + id));
@@ -43,6 +44,7 @@ public class CabinClassServiceImpl implements CabinClassService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CabinClassResponse> getCabinClassesByAircraftId(Long aircraftId) {
         return cabinClassRepository.findByAircraftId(aircraftId).stream()
                 .map(cc -> CabinClassMapper.toResponse(cc, cc.getSeatMap()))
@@ -50,6 +52,7 @@ public class CabinClassServiceImpl implements CabinClassService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CabinClassResponse getByAircraftIdAndName(Long aircraftId, CabinClassType name) {
         CabinClass cabinClass = cabinClassRepository
                 .findByAircraftIdAndName(aircraftId, name);

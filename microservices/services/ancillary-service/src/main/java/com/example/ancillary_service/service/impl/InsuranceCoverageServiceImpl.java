@@ -2,6 +2,7 @@ package com.example.ancillary_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.ancillary_service.mapper.InsuranceCoverageMapper;
 import com.example.ancillary_service.model.Ancillary;
@@ -23,6 +24,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     private final AncillaryRepository ancillaryRepository;
 
     @Override
+    @Transactional
     public InsuranceCoverageResponse createCoverage(InsuranceCoverageRequest request)
             throws Exception {
         Ancillary ancillary = ancillaryRepository.findById(request.getAncillaryId())
@@ -35,6 +37,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     }
 
     @Override
+    @Transactional
     public InsuranceCoverageResponse updateCoverage(Long id,
             InsuranceCoverageRequest request) throws Exception {
         InsuranceCoverage existing = insuranceCoverageRepository.findById(id)
@@ -54,6 +57,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     }
 
     @Override
+    @Transactional
     public void deleteCoverage(Long id) throws Exception {
         InsuranceCoverage coverage = insuranceCoverageRepository.findById(id)
                 .orElseThrow(() -> new Exception(
@@ -79,7 +83,8 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     public List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(Long ancillaryId) {
-        return insuranceCoverageRepository.findByAncillaryIdAndActiveTrue(ancillaryId).stream()
+        return insuranceCoverageRepository.findByAncillaryIdAndActiveTrue(ancillaryId)
+                .stream()
                 .map(InsuranceCoverageMapper::toResponse)
                 .collect(Collectors.toList());
     }

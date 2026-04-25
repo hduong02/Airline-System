@@ -20,13 +20,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class MealServiceImpl implements MealService {
 
     private final MealRepository mealRepository;
     private final AirlineClient airlineClient;
 
     @Override
-    @Transactional
     public MealResponse createMeal(Long userId, MealRequest request) throws Exception {
 
         AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
@@ -56,6 +56,7 @@ public class MealServiceImpl implements MealService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MealResponse getMealById(Long id) throws Exception {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new Exception("Meal not found with id: " + id));
@@ -63,6 +64,7 @@ public class MealServiceImpl implements MealService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MealResponse> getByAirlineId(Long userId) {
         AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
         
@@ -70,7 +72,6 @@ public class MealServiceImpl implements MealService {
                 .map(MealMapper::toResponse)
                 .collect(Collectors.toList());
     }
-
 
     @Override
     public MealResponse updateMeal(Long userId, Long id, MealRequest request)
@@ -100,7 +101,6 @@ public class MealServiceImpl implements MealService {
     }
 
     @Override
-    @Transactional
     public void deleteMeal(Long id) throws Exception {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new Exception("Meal not found with id: " + id));
