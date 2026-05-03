@@ -2,18 +2,5 @@ spring:
   application:
     name: flight-service
 
-  data:
-    redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 1
-  cache:
-    type: redis
-
   config:
     import: optional:configserver:http://localhost:8888

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <title>Booking Confirmed</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+<!-- Outer wrapper -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f0f4f8;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <!-- Email card: max 620px -->
+      <table role="presentation" cellpadding="0" cellspacing="0" width="620"
+             style="max-width:620px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+
+        <!-- ═══════════════════════════════════════════════════════════
+            HEADER
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0a2342 0%,#1a56a0 100%);padding:36px 40px;text-align:center;">
+            <!-- Airline Logo / Name -->
+            <div th:if="${booking.airlineLogo != null}" style="margin-bottom:14px;">
+              <img th:src="${booking.airlineLogo}" alt="Airline Logo" width="64" height="64"
+                   style="border-radius:50%;border:3px solid rgba(255,255,255,0.3);"/>
+            </div>
+            <p style="margin:0 0 6px;color:rgba(255,255,255,0.75);font-size:13px;letter-spacing:2px;text-transform:uppercase;"
+               th:text="${booking.airlineName != null ? booking.airlineName : 'VNAirline'}">VNAirline</p>
+
+            <!-- Confirmed Badge -->
+            <div style="display:inline-block;background:#22c55e;color:#fff;font-size:13px;font-weight:700;
+                        letter-spacing:1.5px;text-transform:uppercase;padding:6px 20px;border-radius:20px;
+                        margin-bottom:18px;">&#10003; Booking Confirmed</div>
+
+            <h1 style="margin:0 0 6px;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:0.5px;">
+              Your trip is all set!
+            </h1>
+            <p style="margin:0;color:rgba(255,255,255,0.80);font-size:15px;">
+              Hi <span th:text="${booking.userName}">Traveller</span>, we've confirmed your booking.
+            </p>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             BOOKING REFERENCE BAR
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="background:#f8faff;border-bottom:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;">
+              Booking Reference</p>
+            <p style="margin:0;font-size:30px;font-weight:800;color:#0a2342;letter-spacing:4px;font-family:monospace;"
+               th:text="${booking.bookingReference}">BK-XXXXXXXX</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#94a3b8;"
+               th:text="'Booked on ' + ${bookingDate}">Booked on 22 Feb 2026</p>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             FLIGHT DETAILS
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="padding:32px 40px 20px;">
+            <h2 style="margin:0 0 20px;font-size:15px;font-weight:700;color:#0a2342;
+                       text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e2e8f0;
+                       padding-bottom:10px;">&#9992; Flight Details</h2>
+
+            <!-- Route visualization -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <!-- Departure -->
+                <td width="38%" valign="top" style="text-align:left;">
+                  <p style="margin:0 0 2px;font-size:42px;font-weight:800;color:#0a2342;line-height:1;"
+                     th:text="${booking.departureAirportCode}">HAN</p>
+                  <p style="margin:0 0 6px;font-size:13px;color:#475569;font-weight:600;"
+                     th:text="${booking.departureCity}">Hanoi</p>
+                  <p style="margin:0 0 2px;font-size:22px;font-weight:700;color:#1a56a0;"
+                     th:text="${depTime}">10:30</p>
+                  <p style="margin:0 0 6px;font-size:12px;color:#64748b;" th:text="${depDate}">22 Feb 2026</p>
+                  <p style="margin:0 0 2px;font-size:11px;color:#94a3b8;"
+                     th:text="${booking.departureAirportName}">Noi Bai International Airport</p>
+                </td>
+
+                <!-- Middle: flight number + duration -->
+                <td width="24%" valign="top" style="text-align:center;padding-top:8px;">
+                  <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#94a3b8;
+                             text-transform:uppercase;letter-spacing:1px;"
+                     th:text="${booking.flightNumber}">AI-202</p>
+                  <!-- SVG arrow line -->
+                  <div style="position:relative;height:2px;background:#cbd5e1;margin:8px 0;border-radius:2px;">
+                    <span style="position:absolute;right:-4px;top:-8px;font-size:18px;color:#1a56a0;">&#9992;</span>
+                  </div>
+                  <p style="margin:4px 0 0;font-size:12px;color:#64748b;font-weight:600;"
+                     th:text="${booking.flightDuration}">2h 15m</p>
+                  <p style="margin:2px 0 0;font-size:10px;color:#94a3b8;">NON-STOP</p>
+                  <p style="margin:10px 0 0;font-size:11px;color:#64748b;"
+                     th:text="${cabinClassDisplay}">Economy</p>
+                  <div th:if="${booking.aircraftModel != null}"
+                       style="margin-top:4px;font-size:10px;color:#94a3b8;"
+                       th:text="${booking.aircraftModel}">Boeing 737</div>
+                </td>
+
+                <!-- Arrival -->
+                <td width="38%" valign="top" style="text-align:right;">
+                  <p style="margin:0 0 2px;font-size:42px;font-weight:800;color:#0a2342;line-height:1;"
+                     th:text="${booking.arrivalAirportCode}">SGN</p>
+                  <p style="margin:0 0 6px;font-size:13px;color:#475569;font-weight:600;"
+                     th:text="${booking.arrivalCity}">Ho Chi Minh</p>
+                  <p style="margin:0 0 2px;font-size:22px;font-weight:700;color:#1a56a0;"
+                     th:text="${arrTime}">12:45</p>
+                  <p style="margin:0 0 6px;font-size:12px;color:#64748b;" th:text="${arrDate}">22 Feb 2026</p>
+                  <p style="margin:0 0 2px;font-size:11px;color:#94a3b8;"
+                     th:text="${booking.arrivalAirportName}">Tan Son Nhat International Airport</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             PASSENGER DETAILS
+        ════════════════════════════════════════════════════════════════ -->
+        <tr th:if="${booking.passengers != null and !booking.passengers.isEmpty()}">
+          <td style="padding:0 40px 28px;">
+            <h2 style="margin:0 0 16px;font-size:15px;font-weight:700;color:#0a2342;
+                       text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e2e8f0;
+                       padding-bottom:10px;">&#128101; Passenger Details</h2>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+                   style="border-collapse:collapse;">
+              <thead>
+                <tr style="background:#f8faff;">
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+                             color:#64748b;text-transform:uppercase;letter-spacing:0.8px;
+                             border-bottom:1px solid #e2e8f0;">#</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+                             color:#64748b;text-transform:uppercase;letter-spacing:0.8px;
+                             border-bottom:1px solid #e2e8f0;">Name</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+                             color:#64748b;text-transform:uppercase;letter-spacing:0.8px;
+                             border-bottom:1px solid #e2e8f0;">Type</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+                             color:#64748b;text-transform:uppercase;letter-spacing:0.8px;
+                             border-bottom:1px solid #e2e8f0;">Ticket No.</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+                             color:#64748b;text-transform:uppercase;letter-spacing:0.8px;
+                             border-bottom:1px solid #e2e8f0;">Passport</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="pax, iStat : ${booking.passengers}"
+                    th:style="${iStat.odd} ? 'background:#ffffff;' : 'background:#f8faff;'">
+                  <td style="padding:10px 12px;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9;"
+                      th:text="${iStat.count}">1</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;">
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#0a2342;"
+                       th:text="${pax.getFullName()}">Passenger Name</p>
+                    <p style="margin:2px 0 0;font-size:11px;color:#94a3b8;"
+                       th:text="${pax.nationality}">Vietnamese</p>
+                  </td>
+                  <td style="padding:10px 12px;font-size:12px;font-weight:600;border-bottom:1px solid #f1f5f9;">
+                    <span th:if="${pax.adult}"
+                          style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:12px;font-size:11px;">Adult</span>
+                    <span th:unless="${pax.adult}"
+                          style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:12px;font-size:11px;">Child</span>
+                  </td>
+                  <td style="padding:10px 12px;font-size:13px;font-family:monospace;color:#1a56a0;
+                             font-weight:600;border-bottom:1px solid #f1f5f9;"
+                      th:text="${pax.ticketNumber}">098-1234567</td>
+                  <td style="padding:10px 12px;font-size:13px;font-family:monospace;color:#475569;
+                             border-bottom:1px solid #f1f5f9;"
+                      th:text="${pax.passportNumber != null ? pax.passportNumber : '—'}">AB1234567</td>
+                </tr>
+
+              </tbody>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             BAGGAGE ALLOWANCE
+        ════════════════════════════════════════════════════════════════ -->
+        <tr th:if="${hasBaggage}">
+          <td style="padding:0 40px 28px;">
+            <h2 style="margin:0 0 16px;font-size:15px;font-weight:700;color:#0a2342;
+                       text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e2e8f0;
+                       padding-bottom:10px;">&#128188; Baggage Allowance</h2>
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td width="50%" style="padding:4px 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:40px;vertical-align:top;">
+                        <div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;
+                                    text-align:center;line-height:36px;font-size:18px;">&#128092;</div>
+                      </td>
+                      <td style="padding-left:12px;">
+                        <p style="margin:0;font-size:12px;color:#64748b;">Cabin Baggage</p>
+                        <p style="margin:2px 0 0;font-size:14px;font-weight:700;color:#0a2342;"
+                           th:text="${cabinBaggage}">1 × 7 kg</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:4px 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:40px;vertical-align:top;">
+                        <div style="width:36px;height:36px;background:#dcfce7;border-radius:8px;
+                                    text-align:center;line-height:36px;font-size:18px;">&#128230;</div>
+                      </td>
+                      <td style="padding-left:12px;">
+                        <p style="margin:0;font-size:12px;color:#64748b;">Check-in Baggage</p>
+                        <p style="margin:2px 0 0;font-size:14px;font-weight:700;color:#0a2342;"
+                           th:text="${checkinBaggage}">1 × 15 kg</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             FARE BENEFITS
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <h2 style="margin:0 0 16px;font-size:15px;font-weight:700;color:#0a2342;
+                       text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e2e8f0;
+                       padding-bottom:10px;">&#11088; Fare Benefits</h2>
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td width="50%" style="padding:4px 0;">
+                  <p th:if="${booking.priorityBoarding}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Priority Boarding</p>
+                  <p th:unless="${booking.priorityBoarding}"
+                     style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Priority Boarding</p>
+                  <p th:if="${booking.loungeAccess}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Lounge Access</p>
+                  <p th:unless="${booking.loungeAccess}"
+                     style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Lounge Access</p>
+                  <p th:if="${booking.complimentaryMeals}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Complimentary Meals</p>
+                  <p th:unless="${booking.complimentaryMeals}"
+                     style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Complimentary Meals</p>
+                </td>
+                <td width="50%" style="padding:4px 0;">
+                  <p th:if="${booking.freeDateChange}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Free Date Change</p>
+                  <p th:unless="${booking.freeDateChange}"
+                     style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Free Date Change</p>
+                  <p th:if="${booking.fullRefund}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Full Refund</p>
+                  <p th:if="${!booking.fullRefund and booking.partialRefund}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Partial Refund</p>
+                  <p th:if="${!booking.fullRefund and !booking.partialRefund}"
+                     style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Non-Refundable</p>
+                  <p th:if="${booking.flexibleTicket}"
+                     style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Flexible Ticket</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             PAYMENT SUMMARY
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <h2 style="margin:0 0 16px;font-size:15px;font-weight:700;color:#0a2342;
+                       text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e2e8f0;
+                       padding-bottom:10px;">&#128179; Payment Summary</h2>
+
+            <!-- Breakdown rows -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr th:if="${booking.baseFare != null}">
+                <td style="padding:7px 0;font-size:14px;color:#475569;">
+                  Base Fare
+                  <span th:if="${passengerCount > 1}"
+                        th:text="'(' + ${passengerCount} + ' pax)'">&#160;</span>
+                </td>
+                <td style="padding:7px 0;font-size:14px;color:#475569;text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${baseFareTotal}">$ 4,000.00</td>
+              </tr>
+              <tr th:if="${booking.taxesAndFees != null and booking.taxesAndFees > 0}">
+                <td style="padding:7px 0;font-size:14px;color:#475569;">Taxes &amp; Fees</td>
+                <td style="padding:7px 0;font-size:14px;color:#475569;text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${taxes}">$ 1,200.00</td>
+              </tr>
+              <tr th:if="${booking.seatFees != null and booking.seatFees > 0}">
+                <td style="padding:7px 0;font-size:14px;color:#475569;">Seat Selection</td>
+                <td style="padding:7px 0;font-size:14px;color:#475569;text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${seatFees}">$ 300.00</td>
+              </tr>
+              <tr th:if="${booking.ancillaryFees != null and booking.ancillaryFees > 0}">
+                <td style="padding:7px 0;font-size:14px;color:#475569;">Add-ons &amp; Ancillaries</td>
+                <td style="padding:7px 0;font-size:14px;color:#475569;text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${ancillaryFees}">$ 0.00</td>
+              </tr>
+              <tr th:if="${booking.mealFees != null and booking.mealFees > 0}">
+                <td style="padding:7px 0;font-size:14px;color:#475569;">Meals</td>
+                <td style="padding:7px 0;font-size:14px;color:#475569;text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${mealFees}">$ 0.00</td>
+              </tr>
+
+              <!-- Divider -->
+              <tr>
+                <td colspan="2" style="padding:4px 0;">
+                  <div style="border-top:2px solid #0a2342;"></div>
+                </td>
+              </tr>
+
+              <!-- Total -->
+              <tr>
+                <td style="padding:10px 0 4px;font-size:16px;font-weight:800;color:#0a2342;">Total Paid</td>
+                <td style="padding:10px 0 4px;font-size:18px;font-weight:800;color:#0a2342;
+                           text-align:right;font-family:monospace;"
+                    th:text="${booking.currency} + ' ' + ${totalAmount}">$ 5,500.00</td>
+              </tr>
+            </table>
+
+            <!-- Payment meta -->
+            <div style="margin-top:16px;background:#f8faff;border-radius:8px;padding:14px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="font-size:12px;color:#64748b;">Transaction ID</td>
+                  <td style="font-size:12px;color:#0a2342;font-family:monospace;font-weight:600;text-align:right;"
+                      th:text="${booking.transactionId}">TXN-123456789</td>
+                </tr>
+                <tr th:if="${booking.providerPaymentId != null}">
+                  <td style="padding-top:6px;font-size:12px;color:#64748b;">Payment Reference</td>
+                  <td style="padding-top:6px;font-size:12px;color:#0a2342;font-family:monospace;font-weight:600;text-align:right;"
+                      th:text="${booking.providerPaymentId}">pay_xyz</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:6px;font-size:12px;color:#64748b;">Paid via</td>
+                  <td style="padding-top:6px;font-size:12px;font-weight:600;color:#0a2342;text-align:right;"
+                      th:text="${booking.paymentGateway}">STRIPE</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:6px;font-size:12px;color:#64748b;">Payment Date</td>
+                  <td style="padding-top:6px;font-size:12px;color:#0a2342;text-align:right;"
+                      th:text="${paidAt}">22 Feb 2026, 08:15</td>
+                </tr>
+              </table>
+            </div>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             WEB CHECK-IN CTA
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="padding:0 40px 32px;text-align:center;">
+            <a href="https://www.vnairline.com/check-in"
+               style="display:inline-block;background:linear-gradient(135deg,#1a56a0,#0a2342);
+                      color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;
+                      padding:14px 48px;border-radius:8px;letter-spacing:0.5px;">
+              &#10003;&nbsp; Web Check-In
+            </a>
+            <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">
+              Web check-in opens 48 hours before departure
+            </p>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             IMPORTANT INFORMATION
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="background:#fefce8;border-top:3px solid #fbbf24;padding:24px 40px;">
+            <h2 style="margin:0 0 14px;font-size:14px;font-weight:700;color:#92400e;
+                       text-transform:uppercase;letter-spacing:1px;">
+              &#9888; Important Information
+            </h2>
+            <ul style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.8;">
+              <li>Web check-in opens <strong>48 hours</strong> before departure</li>
+              <li>Airport check-in counter closes <strong>60 minutes</strong> before departure</li>
+              <li>Arrive at the airport at least <strong>2 hours</strong> before departure (3 hours for international)</li>
+              <li>Carry a valid government-issued photo ID / passport at all times</li>
+              <li>Ensure your name on this booking matches your ID / passport exactly</li>
+              <li th:if="${booking.freeDateChange}">&#10003; You can change your travel date free of charge</li>
+              <li th:if="${booking.fullRefund or booking.partialRefund}">
+                Refund applicable — visit Manage Booking on our website
+              </li>
+              <li th:unless="${booking.fullRefund or booking.partialRefund}">
+                This ticket is <strong>non-refundable</strong>; cancellation fees may apply
+              </li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             MANAGE BOOKING LINK
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+            <a href="https://www.vnairline.com/manage-booking"
+               style="color:#1a56a0;font-size:13px;font-weight:600;text-decoration:none;">
+              Manage Booking
+            </a>
+            <span style="color:#cbd5e1;padding:0 10px;">|</span>
+            <a href="https://www.vnairline.com/check-in"
+               style="color:#1a56a0;font-size:13px;font-weight:600;text-decoration:none;">
+              Web Check-In
+            </a>
+            <span style="color:#cbd5e1;padding:0 10px;">|</span>
+            <a href="https://www.vnairline.com/faq"
+               style="color:#1a56a0;font-size:13px;font-weight:600;text-decoration:none;">
+              Help &amp; FAQ
+            </a>
+          </td>
+        </tr>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             FOOTER
+        ════════════════════════════════════════════════════════════════ -->
+        <tr>
+          <td style="background:#0a2342;padding:28px 40px;text-align:center;">
+            <p style="margin:0 0 6px;color:#ffffff;font-size:16px;font-weight:700;">VNAirline</p>
+            <p style="margin:0 0 16px;color:rgba(255,255,255,0.6);font-size:12px;">
+              Fly Smart. Fly VNAirline.
+            </p>
+            <p style="margin:0 0 6px;color:rgba(255,255,255,0.75);font-size:12px;">
+              &#128231; <a href="mailto:support@vnairline.com"
+                           style="color:#93c5fd;text-decoration:none;">support@vnairline.com</a>
+              &nbsp;&nbsp;&#128222; 1800-XXX-XXXX (24&#215;7)
+            </p>
+            <div style="border-top:1px solid rgba(255,255,255,0.12);margin:18px 0;"></div>
+            <p style="margin:0;color:rgba(255,255,255,0.40);font-size:11px;line-height:1.7;">
+              This is an automated confirmation email. Please do not reply to this email.<br/>
+              &copy; 2026 VNAirline Pvt. Ltd. All rights reserved.<br/>
+              If you did not make this booking, please contact us immediately.
+            </p>
+          </td>
+        </tr>
+
+      </table><!-- /card -->
+
+    </td>
+  </tr>
+</table><!-- /outer wrapper -->
+
+</body>
+</html>

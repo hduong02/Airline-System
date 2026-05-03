@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: notification-service
+  config:
+    import: optional:configserver:http://localhost:8888
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:hoangduongvd99@gmail.com}
+    password: ${MAIL_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.example.event"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.event.BookingConfirmedEvent
+  
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+        
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+
+notification:
+  from-email: ${MAIL_FROM:hoangduongvd99@gmail.com}
+  from-name: "Airlines Notifications"
+  support-email: hoangduongvd99@gmail.com
+  support-phone: "037-309-8706"
+  checkin-url: localhost:5173
+  manage-booking-url: localhost:5173
+
+server:
+  port: 5011
+
+
