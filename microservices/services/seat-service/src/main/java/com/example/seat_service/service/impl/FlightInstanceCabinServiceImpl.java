@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.enums.SeatAvailabilityStatus;
 import com.example.enums.SeatType;
+import com.example.enums.CabinClassType;
 import com.example.payload.request.FlightInstanceCabinRequest;
 import com.example.payload.response.FlightInstanceCabinResponse;
 import com.example.seat_service.mapper.FlightInstanceCabinMapper;
@@ -123,6 +124,18 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
                         flightInstanceId,
                         cabinClassId
                 );
+        return FlightInstanceCabinMapper.toResponse(cabin);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassType(
+            Long flightInstanceId, CabinClassType cabinClassType) {
+        FlightInstanceCabin cabin = flightInstanceCabinRepository
+                .findByFlightInstanceIdAndCabinClass_Name(flightInstanceId, cabinClassType)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Cabin not found for flight instance " + flightInstanceId
+                                + " and class " + cabinClassType));
         return FlightInstanceCabinMapper.toResponse(cabin);
     }
 

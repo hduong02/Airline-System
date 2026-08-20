@@ -15,7 +15,7 @@ public interface BookingService {
         BookingResponse updateBooking(Long id, BookingRequest request)
                         throws Exception;
 
-        BookingResponse getBookingById(Long id) throws Exception;
+        BookingResponse getBookingById(Long id, Long userId) throws Exception;
 
         List<BookingResponse> getAllBookingsByAirline(
                         Long userId,
@@ -26,7 +26,7 @@ public interface BookingService {
 
         List<BookingResponse> getBookingsByUser(Long userId);
 
-        BookingResponse cancelBooking(Long id) throws Exception;
+        BookingResponse cancelBooking(Long id, Long userId) throws Exception;
 
-        void deleteBooking(Long id) throws Exception;
+        void deleteBooking(Long id, Long userId) throws Exception;
 }

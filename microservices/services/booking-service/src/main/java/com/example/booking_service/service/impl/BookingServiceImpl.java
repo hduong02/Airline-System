@@ -2,8 +2,11 @@ package com.example.booking_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.booking_service.client.AirlineClient;
 import com.example.booking_service.client.AncillaryClient;
@@ -19,6 +22,7 @@ import com.example.booking_service.service.PassengerService;
 import com.example.booking_service.service.TicketService;
 import com.example.booking_service.service.integration.FareIntegrationService;
 import com.example.enums.BookingStatus;
+import com.example.event.BookingCancelledEvent;
 import com.example.enums.PaymentGateway;
 import com.example.payload.dto.PaymentDto;
 import com.example.payload.request.BookingRequest;
@@ -29,6 +33,7 @@ import com.example.payload.response.BookingResponse;
 import com.example.payload.response.FareResponse;
 import com.example.payload.response.FlightCabinAncillaryResponse;
 import com.example.payload.response.FlightInstanceResponse;
+import com.example.payload.response.FlightInstanceCabinResponse;
 import com.example.payload.response.FlightMealResponse;
 import com.example.payload.response.FlightResponse;
 import com.example.payload.response.PaymentInitiateResponse;
@@ -54,11 +59,15 @@ public class BookingServiceImpl implements BookingService {
     private final FareIntegrationService fareIntegrationService;
     private final PaymentClient paymentClient;
     private final AirlineClient airlineClient;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     @Transactional
     public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
             throws Exception {
+        FlightInstanceCabinResponse cabin = validateCabinCapacity(request);
+        BookingSelection selection = validateBookingSelection(request, cabin);
+
         // Generate unique booking reference
         String bookingReference = generateBookingReference();
 
@@ -70,15 +79,12 @@ public class BookingServiceImpl implements BookingService {
             passengers.add(passenger);
         }
 
-        // Check if flight exists
-        FlightResponse flightResponse = flightClient.getFlightById(request.getFlightId());
-
         // Create booking entity
         Booking booking = BookingMapper.toEntity(
                 request, userId, passengers, bookingReference);
         
-        // airline id from flightResponse
-        booking.setAirlineId(flightResponse.getAirline().getId());
+        // Airline ID from the validated flight
+        booking.setAirlineId(selection.flight().getAirline().getId());
 
         // Set seat instance IDs from passenger requests
         List<Long> seatInstanceIds = request.getPassengers().stream()
@@ -100,7 +106,7 @@ public class BookingServiceImpl implements BookingService {
         // Calculate total amount
         int passengerCount = booking.getPassengers().size();
         Double fareTotal = fareIntegrationService.calculateFareTotal(
-            booking.getFareId()) * passengerCount;
+            selection.fare()) * passengerCount;
         Double seatPrice = seatClient.calculateSeatPrice(booking.getSeatInstanceIds());
         Double ancillaryPrice = ancillaryClient.calculateAncillariesPrice(
                 booking.getAncillaryIds());
@@ -130,10 +136,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponse getBookingById(Long id) throws Exception {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new Exception(
-                        "Booking not found with ID: " + id));
+    public BookingResponse getBookingById(Long id, Long userId) throws Exception {
+        Booking booking = findOwnedBooking(id, userId);
         return convertToBookingResponse(booking);
     }
 
@@ -170,23 +174,38 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse cancelBooking(Long id) throws Exception {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new Exception(
-                        "Booking not found with ID: " + id));
+    public BookingResponse cancelBooking(Long id, Long userId) throws Exception {
+        Booking booking = bookingRepository.findOwnedByIdForUpdate(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
 
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
+        }
+        ticketService.cancelTicketsForBooking(booking.getId());
         booking.setStatus(BookingStatus.CANCELLED);
         Booking updated = bookingRepository.save(booking);
+        applicationEventPublisher.publishEvent(new BookingCancelledEvent(
+                updated.getId(), updated.getSeatInstanceIds() == null
+                        ? List.of() : new ArrayList<>(updated.getSeatInstanceIds())));
         return convertToBookingResponse(updated);
     }
 
     @Override
     @Transactional
-    public void deleteBooking(Long id) throws Exception {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new Exception(
-                        "Booking not found with ID: " + id));
+    public void deleteBooking(Long id, Long userId) throws Exception {
+        Booking booking = findOwnedBooking(id, userId);
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cancel the booking before deleting it");
+        }
         bookingRepository.delete(booking);
+    }
+
+    private Booking findOwnedBooking(Long id, Long userId) {
+        return bookingRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
     }
 
     private String generateBookingReference() {
@@ -197,6 +216,68 @@ public class BookingServiceImpl implements BookingService {
         } while (bookingRepository.existsByBookingReference(reference));
         return reference;
     }
+
+    private FlightInstanceCabinResponse validateCabinCapacity(BookingRequest request) {
+        FlightInstanceCabinResponse cabin = seatClient.getFlightInstanceCabin(
+                request.getFlightInstanceId(), request.getCabinClass());
+        if (cabin == null) {
+            throw new IllegalArgumentException("Selected cabin does not exist");
+        }
+        int requestedSeats = request.getPassengers().size();
+        int availableSeats = Optional.ofNullable(cabin.getAvailableSeats()).orElse(0);
+
+        if (requestedSeats > availableSeats) {
+            throw new IllegalArgumentException(
+                    "Requested " + requestedSeats + " seats, but only " + availableSeats
+                            + " seats are available in the " + request.getCabinClass() + " cabin");
+        }
+        return cabin;
+    }
+
+    private BookingSelection validateBookingSelection(BookingRequest request,
+            FlightInstanceCabinResponse cabin) {
+        FlightResponse flight = flightClient.getFlightById(request.getFlightId());
+        FlightInstanceResponse flightInstance = flightClient.getFlightInstanceById(
+                request.getFlightInstanceId());
+        if (flight == null || flightInstance == null
+                || !Objects.equals(flightInstance.getFlightId(), request.getFlightId())) {
+            throw new IllegalArgumentException("Flight instance does not belong to the selected flight");
+        }
+
+        FareResponse fare = fareIntegrationService.getFareById(request.getFareId());
+        if (fare == null || !Objects.equals(fare.getFlightId(), request.getFlightId())
+                || fare.getCabinClass() != request.getCabinClass()) {
+            throw new IllegalArgumentException("Fare does not belong to the selected flight and cabin");
+        }
+
+        if (!Objects.equals(cabin.getFlightInstanceId(), request.getFlightInstanceId())
+                || cabin.getCabinClassType() != request.getCabinClass()) {
+            throw new IllegalArgumentException("Cabin does not belong to the selected flight instance");
+        }
+
+        List<Long> selectedSeatIds = request.getPassengers().stream()
+                .map(PassengerRequest::getSeatInstanceId).toList();
+        if (selectedSeatIds.contains(null)
+                || new HashSet<>(selectedSeatIds).size() != selectedSeatIds.size()) {
+            throw new IllegalArgumentException("Each passenger must select a different seat");
+        }
+
+        Map<Long, SeatInstanceResponse> cabinSeats = Optional.ofNullable(cabin.getSeats())
+                .orElseGet(List::of).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(SeatInstanceResponse::getId, seat -> seat, (first, second) -> first));
+        for (Long seatId : selectedSeatIds) {
+            SeatInstanceResponse seat = cabinSeats.get(seatId);
+            if (seat == null || !Objects.equals(seat.getFlightId(), request.getFlightId())
+                    || !Objects.equals(seat.getFlightInstanceId(), request.getFlightInstanceId())
+                    || !Objects.equals(seat.getFlightCabinId(), cabin.getId())) {
+                throw new IllegalArgumentException("Seat " + seatId + " does not belong to the selected flight instance and cabin");
+            }
+        }
+        return new BookingSelection(flight, fare);
+    }
+
+    private record BookingSelection(FlightResponse flight, FareResponse fare) {}
 
     private BookingResponse convertToBookingResponse(Booking booking) {
         List<FlightCabinAncillaryResponse> ancillaryResponses = new ArrayList<>();

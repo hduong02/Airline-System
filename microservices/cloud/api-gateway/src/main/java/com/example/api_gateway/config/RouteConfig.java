@@ -200,9 +200,11 @@ public class RouteConfig {
         Long userId = jwtUtil.extractUserId(token);
 
         return ServerRequest.from(request)
-                .header("X-User-Id", String.valueOf(userId))
-                .header("X-User-Email", email)
-                .header("X-User-Roles", authorities)
+                .headers(headers -> {
+                    headers.set("X-User-Id", String.valueOf(userId));
+                    headers.set("X-User-Email", email);
+                    headers.set("X-User-Roles", authorities);
+                })
                 .build();
     }
 

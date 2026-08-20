@@ -34,8 +34,9 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(
-            @PathVariable Long id) throws Exception {
-        BookingResponse response = bookingService.getBookingById(id);
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) throws Exception {
+        BookingResponse response = bookingService.getBookingById(id, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -68,7 +69,7 @@ public class BookingController {
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long userId) throws Exception {
-        BookingResponse response = bookingService.cancelBooking(id);
+        BookingResponse response = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -76,7 +77,7 @@ public class BookingController {
     public ResponseEntity<Void> deleteBooking(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long userId) throws Exception {
-        bookingService.deleteBooking(id);
+        bookingService.deleteBooking(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

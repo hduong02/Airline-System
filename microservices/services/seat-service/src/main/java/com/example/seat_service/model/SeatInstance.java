@@ -31,6 +31,8 @@ public class SeatInstance {
 
     private Long flightInstanceId;
 
+    private Long bookingId;
+
     @ManyToOne
     private Seat seat;
 

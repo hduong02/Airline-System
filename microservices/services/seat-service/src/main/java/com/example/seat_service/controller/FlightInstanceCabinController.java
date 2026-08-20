@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.payload.request.FlightInstanceCabinRequest;
 import com.example.payload.response.FlightInstanceCabinResponse;
+import com.example.enums.CabinClassType;
 import com.example.seat_service.service.FlightInstanceCabinService;
 
 @RestController
@@ -40,6 +41,15 @@ public class FlightInstanceCabinController {
                 flightInstanceCabinService.getByFlightInstanceIdAndCabinClassId(
                         flightInstanceId,cabinClassId
                 ));
+    }
+
+    @GetMapping("/flight-instance/{flightInstanceId}/cabin-class-type/{cabinClassType}")
+    public ResponseEntity<FlightInstanceCabinResponse> getByFlightInstanceIdAndCabinClassType(
+            @PathVariable Long flightInstanceId,
+            @PathVariable CabinClassType cabinClassType) {
+        return ResponseEntity.ok(
+                flightInstanceCabinService.getByFlightInstanceIdAndCabinClassType(
+                        flightInstanceId, cabinClassType));
     }
 
     @GetMapping("/flight-instance/{flightInstanceId}")

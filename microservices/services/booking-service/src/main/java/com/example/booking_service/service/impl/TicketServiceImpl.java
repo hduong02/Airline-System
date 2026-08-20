@@ -46,6 +46,18 @@ public class TicketServiceImpl implements TicketService {
         return tickets;
     }
 
+    @Override
+    @Transactional
+    public void cancelTicketsForBooking(Long bookingId) {
+        List<Ticket> tickets = ticketRepository.findByBookingId(bookingId);
+        for (Ticket ticket : tickets) {
+            if (ticket.getStatus() == TicketStatus.BOOKED) {
+                ticket.setStatus(TicketStatus.CANCELLED);
+            }
+        }
+        ticketRepository.saveAll(tickets);
+    }
+
     private String generateUniqueTicketNumber() {
         String ticketNumber;
         do {

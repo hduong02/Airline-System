@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.example.payload.request.FlightInstanceCabinRequest;
 import com.example.payload.response.FlightInstanceCabinResponse;
+import com.example.enums.CabinClassType;
 
 public interface FlightInstanceCabinService {
 
@@ -18,6 +19,9 @@ public interface FlightInstanceCabinService {
 
     FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(
             Long flightInstanceId, Long cabinClassId);
+
+    FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassType(
+            Long flightInstanceId, CabinClassType cabinClassType);
 
     FlightInstanceCabinResponse updateFlightInstanceCabin(
             Long id, FlightInstanceCabinRequest request);

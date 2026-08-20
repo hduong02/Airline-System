@@ -14,7 +14,14 @@ public class FareIntegrationService {
 private final PricingClient pricingClient;
 
     public Double calculateFareTotal(Long fareId) {
-        FareResponse fare = pricingClient.getFareById(fareId);
+        return calculateFareTotal(getFareById(fareId));
+    }
+
+    public FareResponse getFareById(Long fareId) {
+        return pricingClient.getFareById(fareId);
+    }
+
+    public Double calculateFareTotal(FareResponse fare) {
         Double baseFare = fare.getBaseFare();
         Double taxesAndFees = fare.getTaxesAndFees() != null
                 ? fare.getTaxesAndFees()

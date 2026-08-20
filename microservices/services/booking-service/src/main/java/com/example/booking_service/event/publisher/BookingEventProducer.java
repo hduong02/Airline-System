@@ -3,12 +3,15 @@ package com.example.booking_service.event.publisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.stereotype.Service;
 
 import com.example.booking_service.model.Booking;
 import com.example.booking_service.model.Passenger;
 import com.example.booking_service.model.Ticket;
 import com.example.event.BookingConfirmedEvent;
+import com.example.event.BookingCancelledEvent;
 import com.example.event.PassengerNotificationData;
 import com.example.event.PaymentCompletedEvent;
 import com.example.payload.dto.UserDto;
@@ -29,7 +32,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BookingEventProducer {
 
-    private final KafkaTemplate<String, BookingConfirmedEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void sendBookingCancelled(BookingCancelledEvent event) {
+        kafkaTemplate.send("booking.cancelled", String.valueOf(event.getBookingId()), event);
+    }
 
     public void sendBookingConfirmed(
             Booking booking,
