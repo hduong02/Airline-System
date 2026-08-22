@@ -3,6 +3,7 @@ package com.example.seat_service.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -26,6 +27,59 @@ class SeatInstanceServiceImplTest {
     private final CancelledBookingRepository cancelledRepository = mock(CancelledBookingRepository.class);
     private final SeatInstanceServiceImpl service = new SeatInstanceServiceImpl(
             seatRepository, cabinRepository, cancelledRepository);
+
+    @Test
+    void reservationClaimsSeatBeforePaymentAndConfirmationKeepsCount() {
+        FlightInstanceCabin cabin = FlightInstanceCabin.builder()
+                .id(40L).totalSeats(1).bookedSeats(0).build();
+        SeatInstance seat = SeatInstance.builder().id(100L)
+                .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.AVAILABLE).build();
+        when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
+        when(cabinRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(cabin));
+
+        service.reserveBookingSeats(99L, List.of(100L));
+
+        assertEquals(SeatAvailabilityStatus.RESERVED, seat.getStatus());
+        assertEquals(99L, seat.getBookingId());
+        assertEquals(1, cabin.getBookedSeats());
+        assertThrows(IllegalStateException.class,
+                () -> service.reserveBookingSeats(98L, List.of(100L)));
+
+        service.confirmBookingSeats(99L, List.of(100L));
+
+        assertEquals(SeatAvailabilityStatus.BOOKED, seat.getStatus());
+        assertEquals(1, cabin.getBookedSeats());
+    }
+
+    @Test
+    void failedPaymentReleasesReservation() {
+        FlightInstanceCabin cabin = FlightInstanceCabin.builder()
+                .id(40L).totalSeats(1).bookedSeats(1).build();
+        SeatInstance seat = SeatInstance.builder().id(100L).bookingId(99L)
+                .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.RESERVED).build();
+        when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
+        when(cabinRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(cabin));
+
+        service.releaseBookingSeats(99L, List.of(100L));
+
+        assertEquals(SeatAvailabilityStatus.AVAILABLE, seat.getStatus());
+        assertEquals(0, cabin.getBookedSeats());
+        assertEquals(null, seat.getBookingId());
+    }
+
+    @Test
+    void confirmationRejectsSeatWithoutReservation() {
+        FlightInstanceCabin cabin = FlightInstanceCabin.builder()
+                .id(40L).totalSeats(1).bookedSeats(0).build();
+        SeatInstance seat = SeatInstance.builder().id(100L)
+                .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.AVAILABLE).build();
+        when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.confirmBookingSeats(99L, List.of(100L)));
+        assertEquals(SeatAvailabilityStatus.AVAILABLE, seat.getStatus());
+        verify(seatRepository, never()).save(seat);
+    }
 
     @Test
     void cancellationReleasesOwnedSeatAndDecrementsCabinOnce() {

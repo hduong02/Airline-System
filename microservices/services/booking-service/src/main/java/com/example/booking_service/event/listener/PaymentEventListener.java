@@ -45,9 +45,11 @@ public class PaymentEventListener {
         Booking booking = bookingRepository.findByIdForUpdate(event.getBookingId())
                 .orElse(null);
 
-        if (booking == null || booking.getStatus() == BookingStatus.CANCELLED)
+        if (booking == null || booking.getStatus() != BookingStatus.PENDING)
             return;
 
+        ticketService.generateTicketsForBooking(booking);
+        booking.setTicketIssued(true);
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setPaymentId(event.getPaymentId());
         booking = bookingRepository.save(booking);

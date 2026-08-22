@@ -7,11 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.inOrder;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +25,7 @@ import com.example.booking_service.client.PaymentClient;
 import com.example.booking_service.client.SeatClient;
 import com.example.event.BookingCancelledEvent;
 import com.example.booking_service.model.Booking;
+import com.example.booking_service.model.Passenger;
 import com.example.booking_service.repository.BookingRepository;
 import com.example.booking_service.service.PassengerService;
 import com.example.booking_service.service.TicketService;
@@ -35,6 +38,7 @@ import com.example.payload.response.FlightInstanceCabinResponse;
 import com.example.payload.response.FareResponse;
 import com.example.payload.response.FlightInstanceResponse;
 import com.example.payload.response.FlightResponse;
+import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.SeatInstanceResponse;
 
 class BookingServiceImplTest {
@@ -54,6 +58,48 @@ class BookingServiceImplTest {
             bookingRepository, passengerService, ticketService, flightClient, seatClient,
             ancillaryClient, fareIntegrationService, paymentClient, airlineClient,
             applicationEventPublisher);
+
+    @Test
+    void createBookingLeavesTicketsUnissuedWhilePaymentIsPending() throws Exception {
+        BookingRequest request = bookingRequest(100L);
+        request.setAncillaryIds(List.of());
+        request.setMealIds(List.of());
+        when(seatClient.getFlightInstanceCabin(20L, CabinClassType.ECONOMY))
+                .thenReturn(cabin(SeatInstanceResponse.builder().id(100L)
+                        .flightId(10L).flightInstanceId(20L).flightCabinId(40L).build()));
+        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder()
+                .id(10L).airline(AirlineResponse.builder().id(50L).build()).build());
+        when(flightClient.getFlightInstanceById(20L))
+                .thenReturn(FlightInstanceResponse.builder().flightId(10L).build());
+        validFare();
+        when(passengerService.createPassenger(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(1L))).thenReturn(Passenger.builder().build());
+        when(bookingRepository.save(org.mockito.ArgumentMatchers.any(Booking.class)))
+                .thenAnswer(invocation -> {
+                    Booking booking = invocation.getArgument(0);
+                    booking.setId(99L);
+                    return booking;
+                });
+        when(fareIntegrationService.calculateFareTotal(
+                org.mockito.ArgumentMatchers.any(FareResponse.class)))
+                .thenReturn(100.0);
+        when(seatClient.calculateSeatPrice(List.of(100L))).thenReturn(0.0);
+        when(ancillaryClient.calculateAncillariesPrice(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(0.0);
+        when(ancillaryClient.calculateMealPrice(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(0.0);
+
+        bookingService.createBooking(request, 1L);
+
+        verify(ticketService, never()).generateTicketsForBooking(
+                org.mockito.ArgumentMatchers.any(Booking.class));
+        verify(paymentClient).initiatePayment(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(1L));
+        InOrder paymentOrder = inOrder(seatClient, paymentClient);
+        paymentOrder.verify(seatClient).reserveBookingSeats(99L, List.of(100L));
+        paymentOrder.verify(paymentClient).initiatePayment(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(1L));
+    }
 
     @Test
     void createBooking_rejectsRequestWhenPassengersExceedCabinAvailability() {

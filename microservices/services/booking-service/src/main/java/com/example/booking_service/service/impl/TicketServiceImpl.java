@@ -42,6 +42,7 @@ public class TicketServiceImpl implements TicketService {
 
             Ticket savedTicket = ticketRepository.save(ticket);
             tickets.add(savedTicket);
+            booking.getTickets().add(savedTicket);
         }
         return tickets;
     }

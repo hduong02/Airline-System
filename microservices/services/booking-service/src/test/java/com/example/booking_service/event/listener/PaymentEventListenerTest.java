@@ -37,6 +37,24 @@ class PaymentEventListenerTest {
             ticketService, publisher);
 
     @Test
+    void completedPaymentIssuesTicketsOnce() {
+        Booking booking = Booking.builder().id(99L).status(BookingStatus.PENDING).build();
+        when(repository.findByIdForUpdate(99L)).thenReturn(Optional.of(booking));
+        when(repository.save(booking)).thenReturn(booking);
+
+        PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+                .bookingId(99L).paymentId(42L).build();
+        listener.handlePaymentCompleted(event);
+        listener.handlePaymentCompleted(event);
+
+        assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
+        assertEquals(42L, booking.getPaymentId());
+        assertEquals(true, booking.isTicketIssued());
+        verify(ticketService).generateTicketsForBooking(booking);
+        verify(repository).save(booking);
+    }
+
+    @Test
     void failedPaymentCancelsTicketsAndPublishesSeatRelease() {
         Booking booking = Booking.builder().id(99L).status(BookingStatus.PENDING)
                 .seatInstanceIds(List.of(100L)).build();
@@ -46,6 +64,7 @@ class PaymentEventListenerTest {
 
         assertEquals(BookingStatus.CANCELLED, booking.getStatus());
         verify(ticketService).cancelTicketsForBooking(99L);
+        verify(ticketService, org.mockito.Mockito.never()).generateTicketsForBooking(booking);
         verify(repository).save(booking);
         verify(publisher).publishEvent(new BookingCancelledEvent(99L, List.of(100L)));
     }

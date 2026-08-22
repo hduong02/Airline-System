@@ -13,6 +13,9 @@ import com.example.seat_service.repository.FlightInstanceCabinRepository;
 import com.example.seat_service.service.SeatInstanceService;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
 
@@ -39,6 +42,57 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
+    public void reserveBookingSeats(Long bookingId, List<Long> seatInstanceIds) {
+        if (seatInstanceIds == null || seatInstanceIds.isEmpty()
+                || seatInstanceIds.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Seat instance IDs are required");
+        }
+        if (cancelledBookingRepository.existsById(bookingId)) {
+            throw new IllegalStateException("Booking has already been cancelled: " + bookingId);
+        }
+        // Lock every requested seat in a stable order before changing any of them.
+        List<SeatInstance> seats = new ArrayList<>();
+        for (Long seatId : distinctSeatIds(seatInstanceIds)) {
+            SeatInstance seat = seatInstanceRepository.findByIdForUpdate(seatId)
+                    .orElseThrow(() -> new IllegalStateException("Seat instance not found: " + seatId));
+            if (seat.getStatus() != SeatAvailabilityStatus.AVAILABLE
+                    && !(seat.getStatus() == SeatAvailabilityStatus.RESERVED
+                            && Objects.equals(seat.getBookingId(), bookingId))) {
+                throw new IllegalStateException("Seat is unavailable: " + seatId);
+            }
+            seats.add(seat);
+        }
+        if (seats.isEmpty() || seats.size() != seatInstanceIds.size()) {
+            throw new IllegalArgumentException("A distinct seat is required for each passenger");
+        }
+
+        Map<Long, Long> newSeatsByCabin = new LinkedHashMap<>();
+        for (SeatInstance seat : seats) {
+            if (seat.getStatus() == SeatAvailabilityStatus.AVAILABLE) {
+                newSeatsByCabin.merge(seat.getFlightInstanceCabin().getId(), 1L, Long::sum);
+            }
+        }
+        for (Long cabinId : new TreeSet<>(newSeatsByCabin.keySet())) {
+            var cabin = flightInstanceCabinRepository.findByIdForUpdate(cabinId)
+                    .orElseThrow(() -> new IllegalStateException("Cabin not found: " + cabinId));
+            int count = newSeatsByCabin.get(cabinId).intValue();
+            if (cabin.getBookedSeats() + count > cabin.getTotalSeats()) {
+                throw new IllegalStateException("Cabin capacity has been reached");
+            }
+            cabin.setBookedSeats(cabin.getBookedSeats() + count);
+        }
+        for (SeatInstance seat : seats) {
+            if (seat.getStatus() == SeatAvailabilityStatus.AVAILABLE) {
+                seat.setStatus(SeatAvailabilityStatus.RESERVED);
+                seat.setBooked(false);
+                seat.setAvailable(false);
+                seat.setBookingId(bookingId);
+                seatInstanceRepository.save(seat);
+            }
+        }
+    }
+
+    @Override
     public void confirmBookingSeats(Long bookingId, List<Long> seatInstanceIds) {
         for (Long seatId : distinctSeatIds(seatInstanceIds)) {
             SeatInstance seat = seatInstanceRepository.findByIdForUpdate(seatId)
@@ -52,16 +106,10 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
                 }
                 continue;
             }
-            if (seat.getStatus() != SeatAvailabilityStatus.AVAILABLE) {
+            if (seat.getStatus() != SeatAvailabilityStatus.RESERVED
+                    || !Objects.equals(seat.getBookingId(), bookingId)) {
                 throw new IllegalStateException("Seat is unavailable: " + seatId);
             }
-            var cabin = flightInstanceCabinRepository.findByIdForUpdate(
-                    seat.getFlightInstanceCabin().getId())
-                    .orElseThrow(() -> new IllegalStateException("Cabin not found for seat instance"));
-            if (cabin.getBookedSeats() >= cabin.getTotalSeats()) {
-                throw new IllegalStateException("Cabin capacity has been reached");
-            }
-            cabin.setBookedSeats(cabin.getBookedSeats() + 1);
             seat.setStatus(SeatAvailabilityStatus.BOOKED);
             seat.setBooked(true);
             seat.setAvailable(false);
@@ -75,20 +123,31 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
         if (!cancelledBookingRepository.existsById(bookingId)) {
             cancelledBookingRepository.saveAndFlush(new CancelledBooking(bookingId));
         }
+        List<SeatInstance> ownedSeats = new ArrayList<>();
         for (Long seatId : distinctSeatIds(seatInstanceIds)) {
             SeatInstance seat = seatInstanceRepository.findByIdForUpdate(seatId)
                     .orElseThrow(() -> new IllegalStateException("Seat instance not found: " + seatId));
-            if (seat.getStatus() != SeatAvailabilityStatus.BOOKED
-                    || (seat.getBookingId() != null && !Objects.equals(seat.getBookingId(), bookingId))) {
+            if ((seat.getStatus() != SeatAvailabilityStatus.BOOKED
+                    && seat.getStatus() != SeatAvailabilityStatus.RESERVED)
+                    || !Objects.equals(seat.getBookingId(), bookingId)) {
                 continue;
             }
-            var cabin = flightInstanceCabinRepository.findByIdForUpdate(
-                    seat.getFlightInstanceCabin().getId())
-                    .orElseThrow(() -> new IllegalStateException("Cabin not found for seat instance"));
-            if (cabin.getBookedSeats() <= 0) {
-                throw new IllegalStateException("Cabin booked seat count is already zero");
+            ownedSeats.add(seat);
+        }
+        Map<Long, Long> seatsByCabin = new LinkedHashMap<>();
+        for (SeatInstance seat : ownedSeats) {
+            seatsByCabin.merge(seat.getFlightInstanceCabin().getId(), 1L, Long::sum);
+        }
+        for (Long cabinId : new TreeSet<>(seatsByCabin.keySet())) {
+            var cabin = flightInstanceCabinRepository.findByIdForUpdate(cabinId)
+                    .orElseThrow(() -> new IllegalStateException("Cabin not found: " + cabinId));
+            int count = seatsByCabin.get(cabinId).intValue();
+            if (cabin.getBookedSeats() < count) {
+                throw new IllegalStateException("Cabin booked seat count is too low");
             }
-            cabin.setBookedSeats(cabin.getBookedSeats() - 1);
+            cabin.setBookedSeats(cabin.getBookedSeats() - count);
+        }
+        for (SeatInstance seat : ownedSeats) {
             seat.setStatus(SeatAvailabilityStatus.AVAILABLE);
             seat.setBooked(false);
             seat.setAvailable(true);

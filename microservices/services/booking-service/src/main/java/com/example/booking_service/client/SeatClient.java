@@ -14,6 +14,14 @@ public interface SeatClient {
     @PostMapping("/api/seat-instances/price/total")
     Double calculateSeatPrice(@RequestBody List<Long> seatInstanceIds);
 
+    @PostMapping("/api/seat-instances/bookings/{bookingId}/reserve")
+    void reserveBookingSeats(@PathVariable Long bookingId,
+            @RequestBody List<Long> seatInstanceIds);
+
+    @PostMapping("/api/seat-instances/bookings/{bookingId}/release")
+    void releaseBookingSeats(@PathVariable Long bookingId,
+            @RequestBody List<Long> seatInstanceIds);
+
     @GetMapping("/api/flight-instance-cabins/flight-instance/{flightInstanceId}/cabin-class-type/{cabinClassType}")
     FlightInstanceCabinResponse getFlightInstanceCabin(
             @PathVariable Long flightInstanceId,

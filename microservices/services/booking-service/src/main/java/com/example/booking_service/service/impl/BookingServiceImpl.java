@@ -1,11 +1,14 @@
 package com.example.booking_service.service.impl;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.booking_service.client.AirlineClient;
@@ -62,7 +65,7 @@ public class BookingServiceImpl implements BookingService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
             throws Exception {
         FlightInstanceCabinResponse cabin = validateCabinCapacity(request);
@@ -100,9 +103,6 @@ public class BookingServiceImpl implements BookingService {
             passenger.setBooking(booking);
         }
 
-        // Generate tickets
-        ticketService.generateTicketsForBooking(booking);
-
         // Calculate total amount
         int passengerCount = booking.getPassengers().size();
         Double fareTotal = fareIntegrationService.calculateFareTotal(
@@ -114,6 +114,32 @@ public class BookingServiceImpl implements BookingService {
                 booking.getMealIds());
 
         Double totalPrice = fareTotal + seatPrice + ancillaryPrice + mealPrice;
+
+        try {
+            seatClient.reserveBookingSeats(booking.getId(), booking.getSeatInstanceIds());
+        } catch (FeignException e) {
+            if (e.status() == 409) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Selected seat is no longer available", e);
+            }
+            throw e;
+        }
+        Long reservedBookingId = booking.getId();
+        List<Long> reservedSeatIds = List.copyOf(booking.getSeatInstanceIds());
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        try {
+                            seatClient.releaseBookingSeats(reservedBookingId, reservedSeatIds);
+                        } catch (Exception e) {
+                            log.error("Failed to release seats for rolled back booking {}", reservedBookingId, e);
+                        }
+                    }
+                }
+            });
+        }
 
         // Initiate payment
         PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
