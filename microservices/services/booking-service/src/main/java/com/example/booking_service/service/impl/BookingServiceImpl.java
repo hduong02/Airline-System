@@ -45,6 +45,8 @@ import com.example.payload.response.SeatInstanceResponse;
 import org.springframework.data.domain.Sort;
 
 import java.util.*;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.stream.Collectors;
 
 
@@ -124,6 +126,7 @@ public class BookingServiceImpl implements BookingService {
             }
             throw e;
         }
+        booking.setHoldExpiresAt(Instant.now().plus(Duration.ofMinutes(30)));
         Long reservedBookingId = booking.getId();
         List<Long> reservedSeatIds = List.copyOf(booking.getSeatInstanceIds());
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -185,17 +188,13 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> bookings = bookingRepository.findByAirlineWithFilters(
                 airlineResponse.getId(), searchQuery, status, flightInstanceId, sort);
 
-        return bookings.stream()
-                .map(this::convertToBookingResponse)
-                .collect(Collectors.toList());
+        return convertToBookingResponses(bookings);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUser(Long userId) {
-        return bookingRepository.findByUserId(userId).stream()
-                .map(this::convertToBookingResponse)
-                .collect(Collectors.toList());
+        return convertToBookingResponses(bookingRepository.findByUserId(userId));
     }
 
     @Override
@@ -205,8 +204,15 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Booking not found"));
 
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Confirmed booking cannot be cancelled until refunds are supported");
+        }
         if (booking.getStatus() == BookingStatus.COMPLETED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Completed booking cannot be cancelled");
+        }
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            return convertToBookingResponse(booking);
         }
         ticketService.cancelTicketsForBooking(booking.getId());
         booking.setStatus(BookingStatus.CANCELLED);
@@ -306,10 +312,31 @@ public class BookingServiceImpl implements BookingService {
     private record BookingSelection(FlightResponse flight, FareResponse fare) {}
 
     private BookingResponse convertToBookingResponse(Booking booking) {
+        return convertToBookingResponses(List.of(booking)).getFirst();
+    }
+
+    private List<BookingResponse> convertToBookingResponses(List<Booking> bookings) {
+        if (bookings.isEmpty()) {
+            return List.of();
+        }
+        List<Long> bookingIds = bookings.stream().map(Booking::getId).toList();
+        List<Long> fareIds = bookings.stream().map(Booking::getFareId)
+                .filter(Objects::nonNull).distinct().toList();
+        Map<Long, PaymentDto> payments = Optional.ofNullable(
+                paymentClient.getPaymentsByBookingIds(bookingIds)).orElseGet(Map::of);
+        Map<Long, FareResponse> fares = fareIds.isEmpty() ? Map.of() : Optional.ofNullable(
+                fareIntegrationService.getFaresByIds(fareIds)).orElseGet(Map::of);
+        return bookings.stream()
+                .map(booking -> convertToBookingResponse(booking,
+                        payments.get(booking.getId()), booking.getFareId() == null
+                                ? null : fares.get(booking.getFareId())))
+                .toList();
+    }
+
+    private BookingResponse convertToBookingResponse(Booking booking,
+            PaymentDto paymentDto, FareResponse fareResponse) {
         List<FlightCabinAncillaryResponse> ancillaryResponses = new ArrayList<>();
         List<FlightMealResponse> mealResponses = new ArrayList<>();
-        PaymentDto paymentDto = new PaymentDto();
-        FareResponse fareResponse = new FareResponse();
         FlightResponse flightResponse = new FlightResponse();
         List<SeatInstanceResponse> seatInstanceResponses = new ArrayList<>();
         FlightInstanceResponse flightInstanceResponse = new FlightInstanceResponse();

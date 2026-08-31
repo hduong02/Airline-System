@@ -11,6 +11,7 @@ import com.example.enums.PaymentStatus;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(name = "uk_payment_booking", columnNames = "booking_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,7 +26,7 @@ public class Payment {
     @Column(nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
+    @Column(name = "booking_id", nullable = false)
     private Long bookingId;
 
     private Double amount;
@@ -34,6 +35,7 @@ public class Payment {
     private PaymentGateway provider;
 
     private String providerPaymentId;
+    private String checkoutSessionId;
     private String transactionId;
 
     @Enumerated(EnumType.STRING)

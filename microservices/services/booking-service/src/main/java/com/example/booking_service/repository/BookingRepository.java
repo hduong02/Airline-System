@@ -11,6 +11,7 @@ import com.example.enums.BookingStatus;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import jakarta.persistence.LockModeType;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
@@ -30,6 +31,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserId(Long userId);
 
     boolean existsByBookingReference(String bookingReference);
+
+    @Query("SELECT b.id FROM Booking b WHERE b.status = :status AND b.holdExpiresAt <= :now ORDER BY b.holdExpiresAt")
+    List<Long> findExpiredBookingIds(@Param("status") BookingStatus status, @Param("now") Instant now);
 
     @Query("""
             SELECT DISTINCT b FROM Booking b

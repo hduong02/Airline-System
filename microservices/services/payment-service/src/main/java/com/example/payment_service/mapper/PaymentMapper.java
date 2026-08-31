@@ -13,11 +13,12 @@ public class PaymentMapper {
         PaymentDto dto = new PaymentDto();
         dto.setId(payment.getId());
         dto.setGateway(payment.getProvider());
-        dto.setAmount(payment.getAmount() != null ? payment.getAmount().longValue() : null);
+        dto.setAmount(payment.getAmount());
         dto.setTransactionId(payment.getTransactionId());
         dto.setStatus(payment.getStatus());
         dto.setUserId(payment.getUserId());
         dto.setBookingId(payment.getBookingId());
+        dto.setGatewayPaymentId(payment.getProviderPaymentId());
 
         if (payment.getPaidAt() != null) {
             dto.setCompletedAt(payment.getPaidAt()

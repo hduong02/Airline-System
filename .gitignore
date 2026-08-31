@@ -8,9 +8,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-# ---- Maven Wrapper ----
-.mvn/wrapper/maven-wrapper.properties
-
 # ---- IDE: IntelliJ IDEA ----
 .idea/
 *.iws
@@ -78,6 +75,9 @@ application-secret.properties
 docker-compose.override.yml
 
 # ---- Misc ----
+# pnpm dependency cache
+.pnpm-store/
+
 *.tmp
 *.bak
 *.swp

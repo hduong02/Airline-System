@@ -1,4 +1,11 @@
 services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: mailhog
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP for locally run notification-service
+      - "127.0.0.1:8025:8025" # Web inbox
+
   # ===========================================================================
   # KAFKA (KRaft Mode - No Zookeeper)
   # ===========================================================================
@@ -24,4 +31,3 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx1g"
-    

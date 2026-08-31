@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.booking_service.client.PricingClient;
 import com.example.payload.response.FareResponse;
+import java.util.List;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +21,10 @@ private final PricingClient pricingClient;
 
     public FareResponse getFareById(Long fareId) {
         return pricingClient.getFareById(fareId);
+    }
+
+    public Map<Long, FareResponse> getFaresByIds(List<Long> fareIds) {
+        return pricingClient.getFaresByIds(fareIds);
     }
 
     public Double calculateFareTotal(FareResponse fare) {

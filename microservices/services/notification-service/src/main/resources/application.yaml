@@ -4,18 +4,14 @@ spring:
   config:
     import: optional:configserver:http://localhost:8888
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:hoangduongvd99@gmail.com}
-    password: ${MAIL_APP_PASSWORD}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: true
-            required: true
-        debug: false
+            enable: false
 
   kafka:
     bootstrap-servers: localhost:9092
@@ -47,9 +43,9 @@ eureka:
     instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
 
 notification:
-  from-email: ${MAIL_FROM:hoangduongvd99@gmail.com}
+  from-email: ${MAIL_FROM:notifications@airlines.test}
   from-name: "Airlines Notifications"
-  support-email: hoangduongvd99@gmail.com
+  support-email: support@airlines.test
   support-phone: "037-309-8706"
   checkin-url: localhost:5173
   manage-booking-url: localhost:5173

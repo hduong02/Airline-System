@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
+@Table(indexes = @Index(name = "idx_booking_status_hold_expiry", columnList = "status, hold_expires_at"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -53,6 +54,9 @@ public class Booking {
 
     private boolean flexibleTicket;
     private LocalDateTime ticketTimeLimit;
+
+    @Column(name = "hold_expires_at")
+    private Instant holdExpiresAt;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

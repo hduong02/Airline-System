@@ -1,6 +1,8 @@
 package com.example.payment_service.service.gateway;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import com.example.payload.dto.UserDto;
 import com.example.payload.response.PaymentLinkResponse;
@@ -74,6 +76,14 @@ public class StripeService {
                     .setSuccessUrl(successUrl)
                     .setCancelUrl(cancelUrl)
                     .setCustomerEmail(user.getEmail())
+                    // Stripe requires at least 30 minutes from Session creation. The
+                    // booking job closes this session at the earlier seat-hold deadline.
+                    .setExpiresAt(Instant.now().plus(31, ChronoUnit.MINUTES).getEpochSecond())
+                    .setPaymentIntentData(SessionCreateParams.PaymentIntentData.builder()
+                            .putMetadata("user_id", String.valueOf(user.getId()))
+                            .putMetadata("payment_id", String.valueOf(payment.getId()))
+                            .putMetadata("booking_id", String.valueOf(payment.getBookingId()))
+                            .build())
                     // Enable Stripe's built-in email receipts / reminders
                     .putMetadata("user_id", String.valueOf(user.getId()))
                     .putMetadata("payment_id", String.valueOf(payment.getId()))
@@ -96,6 +106,17 @@ public class StripeService {
         }
     }
 
+    public PaymentLinkResponse fetchCheckoutLink(String sessionId) throws Exception {
+        if (!isConfigured())
+            throw new Exception("stripe not configured. please setup api key");
+
+        Session session = Session.retrieve(sessionId);
+        PaymentLinkResponse response = new PaymentLinkResponse();
+        response.setPayment_link_id(session.getId());
+        response.setPayment_link_url(session.getUrl());
+        return response;
+    }
+
     public JSONObject fetchPaymentDetails(String paymentIntentId) throws Exception {
         if (!isConfigured())
             throw new Exception("stripe not configured. please setup api key");
@@ -107,6 +128,43 @@ public class StripeService {
             throw new Exception("Failed to fetch payment details: " + e.getMessage());
         }
     }
+
+    public CheckoutState reconcileCheckoutSession(String sessionId) throws StripeException {
+        Session session = Session.retrieve(sessionId);
+        if ("paid".equals(session.getPaymentStatus())) {
+            return new CheckoutState(CheckoutOutcome.PAID, session.getPaymentIntent());
+        }
+        if ("expired".equals(session.getStatus())) {
+            return new CheckoutState(CheckoutOutcome.EXPIRED, null);
+        }
+        if ("complete".equals(session.getStatus())) {
+            return new CheckoutState(CheckoutOutcome.PROCESSING, null);
+        }
+        if (!"open".equals(session.getStatus())) {
+            throw new IllegalStateException("Unknown Stripe Checkout status: " + session.getStatus());
+        }
+        try {
+            session.expire();
+            return new CheckoutState(CheckoutOutcome.EXPIRED, null);
+        } catch (StripeException e) {
+            // Checkout may have completed while the expire request was in flight.
+            Session latest = Session.retrieve(sessionId);
+            if ("paid".equals(latest.getPaymentStatus())) {
+                return new CheckoutState(CheckoutOutcome.PAID, latest.getPaymentIntent());
+            }
+            if ("complete".equals(latest.getStatus())) {
+                return new CheckoutState(CheckoutOutcome.PROCESSING, null);
+            }
+            if ("expired".equals(latest.getStatus())) {
+                return new CheckoutState(CheckoutOutcome.EXPIRED, null);
+            }
+            throw e;
+        }
+    }
+
+    public enum CheckoutOutcome { PAID, EXPIRED, PROCESSING }
+
+    public record CheckoutState(CheckoutOutcome outcome, String paymentIntentId) {}
 
     public boolean isConfigured() {
         return stripeApiKey != null && !stripeApiKey.isEmpty();

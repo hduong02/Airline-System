@@ -6,29 +6,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.enums.PaymentGateway;
 import com.example.enums.PaymentStatus;
 import com.example.payload.dto.PaymentDto;
-import com.example.payload.dto.UserDto;
 import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.request.PaymentVerifyRequest;
 import com.example.payload.response.PaymentInitiateResponse;
-import com.example.payload.response.PaymentLinkResponse;
-import com.example.payment_service.client.UserClient;
 import com.example.payment_service.event.PaymentEventProducer;
 import com.example.payment_service.mapper.PaymentMapper;
 import com.example.payment_service.model.Payment;
 import com.example.payment_service.repository.PaymentRepository;
 import com.example.payment_service.service.PaymentService;
+import com.example.payment_service.service.PaymentInitiationService;
 import com.example.payment_service.service.gateway.StripeService;
+import com.example.payment_service.service.gateway.StripeService.CheckoutOutcome;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,61 +37,17 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final StripeService stripeService;
     private final PaymentEventProducer paymentEventProducer;
-    private final UserClient userClient;
+    private final PaymentInitiationService paymentInitiationService;
 
     @Override
-    @Transactional
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request)
             throws Exception {
         try {
-            // Check if payment already exists for this booking
-            paymentRepository.findByBookingId(request.getBookingId())
-                    .ifPresent(existingPayment -> {
-                        if (existingPayment.getStatus() == PaymentStatus.SUCCESS) {
-                            throw new RuntimeException(
-                                    "Payment already completed for this booking");
-                        }
-                    });
-
-            // Create payment entity
-            Payment payment = Payment.builder()
-                    .userId(request.getUserId())
-                    .bookingId(request.getBookingId())
-                    .amount(request.getAmount())
-                    .provider(request.getGateway())
-                    .status(PaymentStatus.PENDING)
-                    .transactionId(generateTransactionId())
-                    .build();
-
-            payment = paymentRepository.save(payment);
-
-            // Create response based on gateway
-            PaymentInitiateResponse response = PaymentInitiateResponse.builder()
-                    .paymentId(payment.getId())
-                    .gateway(request.getGateway())
-                    .transactionId(payment.getTransactionId())
-                    .amount(request.getAmount())
-                    .description(request.getDescription())
-                    .success(true)
-                    .message("Payment initiated successfully")
-                    .build();
-
-            if (request.getGateway() == PaymentGateway.STRIPE) {
-                UserDto userDto = userClient.getUserById(request.getUserId());
-
-                // create stripe payment link using stripe service
-                PaymentLinkResponse paymentLinkResponse = stripeService.createPaymentLink(
-                        userDto, payment
-                );
-                // set payment link to payment initiate response
-                response.setStripeCheckoutUrl(paymentLinkResponse.getPayment_link_id());
-                response.setCheckoutUrl(paymentLinkResponse.getPayment_link_url());
-            }
-
-            return response;
-
-        } catch (Exception e) {
-            throw new Exception("Failed to initiate payment: " + e.getMessage());
+            return paymentInitiationService.initiatePayment(request);
+        } catch (DataIntegrityViolationException e) {
+            // The losing insert's transaction is already rolled back. Read the
+            // winner in a fresh transaction, never retry inside a failed one.
+            return paymentInitiationService.findExistingPayment(request).orElseThrow(() -> e);
         }
     }
 
@@ -123,9 +77,25 @@ public class PaymentServiceImpl implements PaymentService {
             
             paymentId = Long.parseLong(metadata.optString("payment_id"));
 
-            Payment payment = paymentRepository.findById(paymentId)
+            Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                     .orElseThrow(() -> new Exception(
                             "Payment not found with ID: " + paymentId));
+
+            if (payment.getStatus() == PaymentStatus.SUCCESS) {
+                return PaymentMapper.toDto(payment);
+            }
+            if (payment.getStatus() != PaymentStatus.PENDING) {
+                throw new IllegalStateException("Payment is no longer pending: " + paymentId);
+            }
+
+            switch (status) {
+                case "requires_payment_method", "requires_confirmation", "requires_action",
+                        "processing", "requires_capture" -> {
+                    return PaymentMapper.toDto(payment);
+                }
+                case "succeeded", "canceled" -> { }
+                default -> throw new IllegalStateException("Unknown Stripe PaymentIntent status: " + status);
+            }
 
             if (isValid)
                 payment.setProviderPaymentId(request.getStripePaymentIntentId());
@@ -134,6 +104,32 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             throw new Exception("No payment method provided");
         }
+    }
+
+    @Override
+    @Transactional
+    public PaymentDto reconcileExpiredCheckout(Long bookingId) throws Exception {
+        Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No payment found for booking: " + bookingId));
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return PaymentMapper.toDto(payment);
+        }
+        if (payment.getCheckoutSessionId() == null) {
+            throw new IllegalStateException("Checkout Session is missing for booking: " + bookingId);
+        }
+
+        var checkout = stripeService.reconcileCheckoutSession(payment.getCheckoutSessionId());
+        if (checkout.outcome() == CheckoutOutcome.PAID) {
+            payment.setProviderPaymentId(checkout.paymentIntentId());
+            return saveAndPublish(payment, true, "succeeded");
+        }
+        if (checkout.outcome() == CheckoutOutcome.EXPIRED) {
+            payment.setStatus(PaymentStatus.CANCELLED);
+            payment.setFailureReason("Checkout expired before payment");
+            return PaymentMapper.toDto(paymentRepository.save(payment));
+        }
+        return PaymentMapper.toDto(payment);
     }
 
     // Persists the verified payment and publishes the corresponding event
@@ -147,7 +143,7 @@ public class PaymentServiceImpl implements PaymentService {
             paymentEventProducer.sendPaymentCompleted(payment);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason("Payment verification failed");
+            payment.setFailureReason("Stripe PaymentIntent " + status);
             payment = paymentRepository.save(payment);
 
             // publish payment failed event
@@ -173,8 +169,4 @@ public class PaymentServiceImpl implements PaymentService {
                 .collect(Collectors.toMap(Payment::getBookingId, PaymentMapper::toDto));
     }
 
-    private String generateTransactionId() {
-        return "TXN_" + System.currentTimeMillis() + "_" +
-                UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
 }

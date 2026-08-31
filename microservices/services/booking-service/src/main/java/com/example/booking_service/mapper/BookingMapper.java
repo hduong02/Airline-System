@@ -71,7 +71,7 @@ public class BookingMapper {
                 .bookingReference(booking.getBookingReference())
                 .userId(booking.getUserId())
 //                flight details
-                .flightId(booking.getFlightInstanceId())
+                .flightId(booking.getFlightId())
                 .flightNumber(flightResponse != null ? flightResponse.getFlightNumber() : null)
                 .flightName(flightResponse != null && flightResponse.getArrivalAirport() != null && flightResponse.getDepartureAirport() != null
                         ? flightResponse.getDepartureAirport().getCity().getName() + " - " + flightResponse.getArrivalAirport().getCity().getName()
@@ -93,11 +93,12 @@ public class BookingMapper {
                 .seatInstances(seats)
                 .paymentStatus(paymentDto != null ? paymentDto.getStatus() : null)
 //                fare details
+                .fareId(booking.getFareId())
                 .fareName(fareResponse != null ? fareResponse.getName() : null)
                 .fareBaseFare(fareResponse != null ? fareResponse.getBaseFare() : null)
                 .fareTaxesAndFees(fareResponse != null ? fareResponse.getTaxesAndFees() : null)
                 .fareAirlineFees(fareResponse != null ? fareResponse.getAirlineFees() : null)
-                .totalAmount(fareResponse!=null?fareResponse.getTotalPrice():null)
+                .totalAmount(paymentDto != null ? paymentDto.getAmount() : null)
 //                contact information
                 .contactInfo(booking.getContactInfo())
 

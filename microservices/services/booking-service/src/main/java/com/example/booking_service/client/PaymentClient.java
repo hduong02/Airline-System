@@ -14,7 +14,7 @@ import java.util.Map;
 @FeignClient(name = "payment-service")
 public interface PaymentClient {
 
-    @PostMapping("/api/payments/initiate")
+    @PostMapping("/internal/payments/initiate")
     PaymentInitiateResponse initiatePayment(
             @Valid @RequestBody PaymentInitiateRequest request,
             @RequestHeader("X-User-Id") Long userId);
@@ -24,4 +24,7 @@ public interface PaymentClient {
 
     @PostMapping("/api/payments/batch/bookings")
     Map<Long, PaymentDto> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds);
+
+    @PostMapping("/internal/payments/booking/{bookingId}/reconcile-expiry")
+    PaymentDto reconcileExpiredCheckout(@PathVariable Long bookingId);
 }

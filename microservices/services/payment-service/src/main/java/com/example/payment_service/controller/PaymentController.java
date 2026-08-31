@@ -11,9 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.payload.dto.PaymentDto;
-import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.request.PaymentVerifyRequest;
-import com.example.payload.response.PaymentInitiateResponse;
 import com.example.payment_service.service.PaymentService;
 
 import java.util.List;
@@ -26,14 +24,6 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentService paymentService;
-
-    @PostMapping("/initiate")
-    public ResponseEntity<?> initiatePayment(
-            @Valid @RequestBody PaymentInitiateRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws Exception {
-        PaymentInitiateResponse response = paymentService.initiatePayment(request);
-        return ResponseEntity.ok(response);
-    }
 
     @PostMapping("/verify")
     public ResponseEntity<?> verifyPayment(

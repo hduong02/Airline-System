@@ -22,7 +22,7 @@ public class PaymentDto {
     private Long bookingId;
     private PaymentStatus status;
     private PaymentGateway gateway;
-    private Long amount;
+    private Double amount;
     private String transactionId;
     private String gatewayPaymentId;
     private String gatewayOrderId;
