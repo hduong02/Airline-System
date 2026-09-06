@@ -6,11 +6,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.example.enums.CabinClassType;
 import com.example.payload.response.CabinClassResponse;
+import com.example.payload.response.FlightInstanceCabinResponse;
 
 import java.util.List;
 
 @FeignClient(name = "seat-service")
 public interface SeatClient {
+
+    @GetMapping("/api/flight-instance-cabins/flight-instance/{flightInstanceId}/cabin-class/{cabinClassId}")
+    FlightInstanceCabinResponse getFlightInstanceCabin(
+            @PathVariable Long flightInstanceId,
+            @PathVariable Long cabinClassId);
 
     @GetMapping("api/seats/aircraft/{aircraftId}")
     List<CabinClassResponse> getCabinClassesByAircraftId(

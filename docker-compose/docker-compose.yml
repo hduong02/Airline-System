@@ -172,6 +172,24 @@ services:
       retries: 10
       start_period: 10s
   # ===========================================================================
+  # REDIS CACHE
+  # ===========================================================================
+
+  redis:
+    image: redis:8.10-alpine
+    container_name: redis
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: 0.5
+    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ===========================================================================
   # KAFKA (KRaft Mode - No Zookeeper)
   # ===========================================================================
 
@@ -185,10 +203,12 @@ services:
       - "9092:9092"
     environment:
       KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker, controller
+      KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -202,14 +222,14 @@ services:
   # ===========================================================================
 
   config-server:
-    image: "andyy02/config-server:1.0.0"
+    image: "andyy02/config-server:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: config-server
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
 
     environment:
-      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: "https://github.com/hduong02/airline-system-config.git"
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: "${CONFIG_GIT_URI:-https://github.com/hduong02/airline-system-config.git}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     healthcheck:
@@ -225,7 +245,7 @@ services:
   # ===========================================================================
 
   service-registry:
-    image: "andyy02/service-registry:1.0.0"
+    image: "andyy02/service-registry:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: eureka-server
     mem_limit: 512m
     mem_reservation: 256m
@@ -249,7 +269,7 @@ services:
   # ===========================================================================
 
   api-gateway:
-    image: "andyy02/api-gateway:1.0.0"
+    image: "andyy02/api-gateway:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: api-gateway
     mem_limit: 512m
     mem_reservation: 256m
@@ -273,7 +293,7 @@ services:
   # ===========================================================================
 
   user-service:
-    image: "andyy02/user-service:1.0.0"
+    image: "andyy02/user-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: user-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -297,7 +317,7 @@ services:
     restart: unless-stopped
 
   airline-service:
-    image: "andyy02/airline-service:1.0.0"
+    image: "andyy02/airline-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: airline-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -309,8 +329,12 @@ services:
         condition: service_healthy
       airlinedb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "airline-service"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://airlinedb:3306/airline_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -320,20 +344,26 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   flight-service:
-    image: "andyy02/flight-service:1.0.0"
+    image: "andyy02/flight-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: flight-service
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
     depends_on:
+      kafka:
+        condition: service_started
       config-server:
         condition: service_healthy
       service-registry:
         condition: service_healthy
       flightdb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "flight-service"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://flightdb:3306/airline_flight_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -344,7 +374,7 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   location-service:
-    image: "andyy02/location-service:1.0.0"
+    image: "andyy02/location-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: location-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -356,8 +386,12 @@ services:
         condition: service_healthy
       locationdb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "location-service"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://locationdb:3306/airline_location_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -367,7 +401,7 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   seat-service:
-    image: "andyy02/seat-service:1.0.0"
+    image: "andyy02/seat-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: seat-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -393,7 +427,7 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   pricing-service:
-    image: "andyy02/pricing-service:1.0.0"
+    image: "andyy02/pricing-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: pricing-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -409,6 +443,8 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "pricing-service"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://pricingdb:3306/airline_pricing_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -418,7 +454,7 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   ancillary-service:
-    image: "andyy02/ancillary-service:1.0.0"
+    image: "andyy02/ancillary-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: ancillary-service
     mem_limit: 512m
     mem_reservation: 256m
@@ -441,12 +477,14 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   booking-service:
-    image: "andyy02/booking-service:1.0.0"
+    image: "andyy02/booking-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: booking-service
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
     depends_on:
+      kafka:
+        condition: service_started
       config-server:
         condition: service_healthy
       service-registry:
@@ -455,6 +493,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "booking-service"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://bookingdb:3306/airline_booking_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -464,12 +503,14 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
   payment-service:
-    image: "andyy02/payment-service:1.0.0"
+    image: "andyy02/payment-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: payment-service
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
     depends_on:
+      kafka:
+        condition: service_started
       config-server:
         condition: service_healthy
       service-registry:
@@ -478,6 +519,8 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "payment-service"
+      STRIPE_API_KEY: "${STRIPE_API_KEY:?Set STRIPE_API_KEY for the target Stripe account}"
+      STRIPE_CALLBACK_BASE_URL: "${STRIPE_CALLBACK_BASE_URL:?Set STRIPE_CALLBACK_BASE_URL to the frontend URL}"
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://paymentdb:3306/airline_payment_db?useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: root
@@ -486,3 +529,42 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
+
+  # MailHog captures mail for this development stack.
+  # For real delivery, configure notification-service with your SMTP provider.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: mailhog
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
+  notification-service:
+    image: "andyy02/notification-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
+    container_name: notification-service
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: "notification-service"
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MAIL_HOST: "${MAIL_HOST:-mailhog}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_FROM: "${MAIL_FROM:-notifications@airlines.test}"
+      SPRING_MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      SPRING_MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "${MAIL_SMTP_AUTH:-false}"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "${MAIL_STARTTLS_ENABLE:-false}"
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
+    restart: unless-stopped

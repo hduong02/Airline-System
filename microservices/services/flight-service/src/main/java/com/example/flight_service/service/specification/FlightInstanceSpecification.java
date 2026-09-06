@@ -57,7 +57,7 @@ public class FlightInstanceSpecification {
             }
 
             // 7. Seat availability guard - total available seats >= passengers
-            //    (per-cabin availability is checked at booking time via seat-service)
+            //    (search checks live cabin seats before pagination; booking validates again)
             if (request.getPassengers() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(
                         root.get("availableSeats"), request.getPassengers()));

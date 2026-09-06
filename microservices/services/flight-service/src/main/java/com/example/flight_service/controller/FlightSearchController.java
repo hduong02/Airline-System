@@ -49,6 +49,7 @@ public class FlightSearchController {
                 .passengers(passengers)
                 .cabinClass(cabinClass)
                 .airlines(airlines)
+                .alliance(alliance)
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .departureTimeRange(departureTimeRange)

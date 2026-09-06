@@ -31,6 +31,7 @@ public class FlightSearchRequest {
 
     // Filter Parameters
     private List<Long> airlines; // Filter by airline ids
+    private String alliance; // "any", "star", "oneworld", "skyteam", or full alliance name
     private Double minPrice; // Minimum price filter
     private Double maxPrice; // Maximum price filter
     private String departureTimeRange; // "any", "morning", "afternoon", "evening", "night"

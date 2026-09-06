@@ -70,6 +70,7 @@ application-local.yml
 application-local.properties
 application-secret.yml
 application-secret.properties
+scripts/booking-smoke.local.json
 
 # ---- Docker ----
 docker-compose.override.yml
