@@ -140,51 +140,51 @@ const FlightForm = () => {
 
   if (isLoadingFlight) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/50 text-foreground flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading flight data...</p>
+          <p className="mt-4 text-muted-foreground">Loading flight data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="bg-white rounded-lg shadow-sm border w-full">
-        <div className="flex items-center space-x-4 p-4 border-b bg-gray-50/50">
+    <div className="min-h-screen bg-muted/50 text-foreground">
+      <div className="bg-card text-card-foreground rounded-lg shadow-sm border border-border w-full">
+        <div className="flex items-center space-x-4 p-4 border-b border-border bg-muted/50">
           <Button
             variant="ghost"
             onClick={() => navigate("/airline/flights")}
-            className="flex items-center hover:bg-gray-100"
+            className="flex items-center hover:bg-accent"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Flights
           </Button>
-          <div className="text-sm text-gray-500 font-medium">
+          <div className="text-sm text-muted-foreground font-medium">
             / Flight Management / {flightId ? "Edit" : "New Flight"}
           </div>
         </div>
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10 ">
+        <div className="sticky top-0 bg-card border-b border-border p-6 z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-card-foreground flex items-center gap-3">
                 <div className="bg-primary/10 p-3 rounded-lg">
                   <Plane className="h-6 w-6 text-primary" />
                 </div>
                 {flightId ? "Edit Flight" : "Create New Flight"}
               </h2>
-              <p className="text-gray-600 mt-2">
+              <p className="text-muted-foreground mt-2">
                 Configure all flight details, aircraft selection, and dynamic
                 fare pricing
               </p>
             </div>
             <div className="hidden md:block">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-blue-900">
+              <div className="bg-muted border border-border rounded-lg p-3">
+                <p className="text-sm font-medium text-foreground">
                   💡 Smart Pricing
                 </p>
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-muted-foreground">
                   Fares will automatically adapt based on selected aircraft
                   cabin classes
                 </p>
@@ -217,7 +217,7 @@ const FlightForm = () => {
                         <ErrorMessage
                           name="flightNumber"
                           component="div"
-                          className="text-sm text-red-600 mt-1"
+                          className="text-sm text-red-600 dark:text-red-400 mt-1"
                         />
                       </div>
                       <div className="space-y-3">
@@ -258,7 +258,7 @@ const FlightForm = () => {
                         <ErrorMessage
                           name="aircraftId"
                           component="div"
-                          className="text-sm text-red-600 mt-1"
+                          className="text-sm text-red-600 dark:text-red-400 mt-1"
                         />
                       </div>
                     </div>
@@ -298,7 +298,7 @@ const FlightForm = () => {
                         <ErrorMessage
                           name="departureAirportId"
                           component="div"
-                          className="text-sm text-red-600 mt-1"
+                          className="text-sm text-red-600 dark:text-red-400 mt-1"
                         />
                       </div>
                       <div className="space-y-3">
@@ -335,7 +335,7 @@ const FlightForm = () => {
                         <ErrorMessage
                           name="arrivalAirportId"
                           component="div"
-                          className="text-sm text-red-600 mt-1"
+                          className="text-sm text-red-600 dark:text-red-400 mt-1"
                         />
                       </div>
                     </div>
@@ -345,11 +345,11 @@ const FlightForm = () => {
                 {/* Dynamic Fares Section */}
 
                 {/* Form Actions */}
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 z-10 ">
+                <div className="sticky bottom-0 bg-card border-t border-border p-6 z-10">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       {selectedAircraftId && (
-                        <span className="ml-2 text-gray-500">
+                        <span className="ml-2 text-muted-foreground">
                           • Aircraft:{" "}
                           {
                             aircrafts.find(

@@ -51,6 +51,33 @@ import { getAllCities } from "@/Redux/city/cityThunk";
 //   logoUrl: Yup.string().url("Invalid logo URL").nullable(),
 // });
 
+// Keep this component outside the step so updates preserve inputs and focus.
+const FormField = ({ name, label, children, required = false, helpText, ...props }) => (
+    <div className="space-y-2">
+      <Label htmlFor={name} className="text-gray-700 flex items-center gap-2 font-medium">
+        {props.icon && <props.icon className="w-4 h-4 text-gray-500" />}
+        {label}
+        {required && <span className="text-red-500 text-sm">*</span>}
+        {helpText && (
+          <div className="ml-auto">
+            <div className="group relative">
+              <AlertCircle className="w-4 h-4 text-gray-400 cursor-help" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                {helpText}
+              </div>
+            </div>
+          </div>
+        )}
+      </Label>
+      {children}
+      <ErrorMessage
+        name={name}
+        component="div"
+        className="text-red-500 text-sm flex items-center gap-1"
+      />
+    </div>
+  );
+
 const AirlineDetailsStep = ({ data, onDataChange, onNext, onPrevious }) => {
   const [logoPreview, setLogoPreview] = useState(data?.logoUrl || "");
   const { cities } = useSelector((state) => state.city);
@@ -142,31 +169,6 @@ const AirlineDetailsStep = ({ data, onDataChange, onNext, onPrevious }) => {
     onNext();
   };
 
-  const FormField = ({ name, label, children, required = false, helpText, ...props }) => (
-    <div className="space-y-2">
-      <Label htmlFor={name} className="text-gray-700 flex items-center gap-2 font-medium">
-        {props.icon && <props.icon className="w-4 h-4 text-gray-500" />}
-        {label}
-        {required && <span className="text-red-500 text-sm">*</span>}
-        {helpText && (
-          <div className="ml-auto">
-            <div className="group relative">
-              <AlertCircle className="w-4 h-4 text-gray-400 cursor-help" />
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                {helpText}
-              </div>
-            </div>
-          </div>
-        )}
-      </Label>
-      {children}
-      <ErrorMessage
-        name={name}
-        component="div"
-        className="text-red-500 text-sm flex items-center gap-1"
-      />
-    </div>
-  );
 
   return (
     <div className="space-y-8">

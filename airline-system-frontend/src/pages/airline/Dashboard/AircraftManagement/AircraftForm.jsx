@@ -218,13 +218,13 @@ const AircraftForm = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto border rounded-md bg-white">
+    <div className="w-full max-w-4xl mx-auto border border-border rounded-md bg-card text-card-foreground [color-scheme:light] dark:[color-scheme:dark]">
       <div className="p-6 border-b">
         <h2 className="text-xl font-bold">{isEditMode ? 'Edit Aircraft' : 'Create New Aircraft'}</h2>
       </div>
       <div className="p-6">
         {error && (
-          <div className="bg-red-50 text-red-800 border border-red-200 p-4 rounded-md mb-6">
+          <div className="bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800 p-4 rounded-md mb-6">
             {error}
           </div>
         )}
@@ -436,11 +436,11 @@ const AircraftForm = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <div className="border rounded-md p-2">
+                  <div className="border border-input rounded-md p-2">
                     <select 
                       id="status"
                       name="status"
-                      className="w-full bg-transparent outline-none"
+                      className="w-full bg-card text-card-foreground outline-none"
                       value={formData.status}
                       onChange={(e) => handleSelectChange('status', e.target.value)}
                     >

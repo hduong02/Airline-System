@@ -26,6 +26,93 @@ import { signup } from '@/Redux/auth/authThunk';
       .required('Please confirm your password')
       .oneOf([Yup.ref('password')], 'Passwords must match')
   });
+// Keep this component outside the step so updates preserve inputs and focus.
+const FormField = ({ name, label, type = 'text', icon: Icon, isPassword = false, passwordStrength, showPassword, showConfirmPassword, setShowPassword, setShowConfirmPassword, onPasswordChange, ...props }) => (
+    <div className="space-y-2">
+      <Label htmlFor={name} className="text-gray-700 flex items-center gap-2 font-medium">
+        {Icon && <Icon className="w-4 h-4 text-gray-500" />}
+        {label}
+        {name === 'password' && (
+          <div className="ml-auto flex items-center space-x-2">
+            {passwordStrength > 0 && (
+              <div className="flex space-x-1">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <div
+                    key={level}
+                    className={`h-1 w-4 rounded-full transition-colors ${
+                      level <= passwordStrength
+                        ? level <= 2
+                          ? 'bg-red-400'
+                          : level <= 3
+                          ? 'bg-yellow-400'
+                          : 'bg-green-400'
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Label>
+      <Field name={name}>
+    {({ field, meta }) => (
+          <div className="relative">
+            <Input
+              {...field}
+              {...props}
+              id={name}
+              type={isPassword ? (name === 'password' ? (showPassword ? 'text' : 'password') : (showConfirmPassword ? 'text' : 'password')) : type}
+              className={`transition-all duration-300 hover:shadow-md focus:shadow-lg pr-10 ${
+                meta.touched && meta.error
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                  : meta.touched && !meta.error
+                  ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
+                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
+              onChange={(e) => {
+                field.onChange(e);
+                if (name === 'password') {
+                  onPasswordChange(e.target.value);
+                }
+              }}
+            />
+            {/* Password visibility toggle */}
+            {isPassword && (
+              <button
+                type="button"
+                onClick={() => name === 'password' ? setShowPassword(!showPassword) : setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {(name === 'password' ? showPassword : showConfirmPassword) ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            {/* Validation icons */}
+            {meta.touched && !isPassword && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {meta.error ? (
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Field>
+      <ErrorMessage name={name} component="div" className="text-red-500 text-sm flex items-center gap-1" />
+      {name === 'password' && passwordStrength > 0 && (
+        <div className="text-xs text-gray-600">
+          Password strength: {passwordStrength <= 2 ? 'Weak' : passwordStrength <= 3 ? 'Fair' : passwordStrength <= 4 ? 'Good' : 'Strong'}
+        </div>
+      )}
+    </div>
+  );
+
 const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -102,91 +189,6 @@ const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
     return strength;
   };
 
-  const FormField = ({ name, label, type = 'text', icon: Icon, isPassword = false, ...props }) => (
-    <div className="space-y-2">
-      <Label htmlFor={name} className="text-gray-700 flex items-center gap-2 font-medium">
-        {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-        {label}
-        {name === 'password' && (
-          <div className="ml-auto flex items-center space-x-2">
-            {passwordStrength > 0 && (
-              <div className="flex space-x-1">
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <div
-                    key={level}
-                    className={`h-1 w-4 rounded-full transition-colors ${
-                      level <= passwordStrength
-                        ? level <= 2
-                          ? 'bg-red-400'
-                          : level <= 3
-                          ? 'bg-yellow-400'
-                          : 'bg-green-400'
-                        : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </Label>
-      <Field name={name}>
-    {({ field, meta }) => (
-          <div className="relative">
-            <Input
-              {...field}
-              {...props}
-              id={name}
-              type={isPassword ? (name === 'password' ? (showPassword ? 'text' : 'password') : (showConfirmPassword ? 'text' : 'password')) : type}
-              className={`transition-all duration-300 hover:shadow-md focus:shadow-lg pr-10 ${
-                meta.touched && meta.error
-                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-                  : meta.touched && !meta.error
-                  ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
-                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/20'
-              }`}
-              onChange={(e) => {
-                field.onChange(e);
-                if (name === 'password') {
-                  setPasswordStrength(calculatePasswordStrength(e.target.value));
-                }
-              }}
-            />
-            {/* Password visibility toggle */}
-            {isPassword && (
-              <button
-                type="button"
-                onClick={() => name === 'password' ? setShowPassword(!showPassword) : setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                {(name === 'password' ? showPassword : showConfirmPassword) ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            )}
-            {/* Validation icons */}
-            {meta.touched && !isPassword && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                {meta.error ? (
-                  <AlertCircle className="w-4 h-4 text-red-500" />
-                ) : (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </Field>
-      <ErrorMessage name={name} component="div" className="text-red-500 text-sm flex items-center gap-1" />
-      {name === 'password' && passwordStrength > 0 && (
-        <div className="text-xs text-gray-600">
-          Password strength: {passwordStrength <= 2 ? 'Weak' : passwordStrength <= 3 ? 'Fair' : passwordStrength <= 4 ? 'Good' : 'Strong'}
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="space-y-8">
@@ -215,14 +217,26 @@ const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
             <Form className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <FormField
-                  name="fullName"
+                  passwordStrength={passwordStrength}
+                  showPassword={showPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  setShowPassword={setShowPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  onPasswordChange={(password) => setPasswordStrength(calculatePasswordStrength(password))}
+                                    name="fullName"
                   label="Full Name"
                   placeholder="Enter your full name"
                   icon={User}
                 />
 
                 <FormField
-                  name="email"
+                  passwordStrength={passwordStrength}
+                  showPassword={showPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  setShowPassword={setShowPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  onPasswordChange={(password) => setPasswordStrength(calculatePasswordStrength(password))}
+                                    name="email"
                   label="Email Address"
                   type="email"
                   placeholder="admin@yourairline.com"
@@ -231,7 +245,13 @@ const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
               </div>
 
               <FormField
-                name="phone"
+                  passwordStrength={passwordStrength}
+                  showPassword={showPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  setShowPassword={setShowPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  onPasswordChange={(password) => setPasswordStrength(calculatePasswordStrength(password))}
+                                  name="phone"
                 label="Phone Number"
                 type="tel"
                 placeholder="Enter your phone number (e.g., +1 234 567 8900)"
@@ -240,7 +260,13 @@ const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <FormField
-                  name="password"
+                  passwordStrength={passwordStrength}
+                  showPassword={showPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  setShowPassword={setShowPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  onPasswordChange={(password) => setPasswordStrength(calculatePasswordStrength(password))}
+                                    name="password"
                   label="Password"
                   placeholder="Create a secure password"
                   icon={Lock}
@@ -248,7 +274,13 @@ const OwnerDetailsStep = ({ data, onDataChange, onNext }) => {
                 />
 
                 <FormField
-                  name="confirmPassword"
+                  passwordStrength={passwordStrength}
+                  showPassword={showPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  setShowPassword={setShowPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  onPasswordChange={(password) => setPasswordStrength(calculatePasswordStrength(password))}
+                                    name="confirmPassword"
                   label="Confirm Password"
                   placeholder="Confirm your password"
                   icon={Lock}

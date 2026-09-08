@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LogOut } from "lucide-react"
 import { useDispatch } from "react-redux"
@@ -22,7 +23,7 @@ import { sidebarSections } from "./sideBarSections"
 
 
 
-const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleCollapse }) => {
+const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
   const [expandedSections, setExpandedSections] = React.useState({
     airlines: false,
     flights: true,
@@ -54,12 +55,12 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
 
   return (
     <div className={cn(
-      "fixed left-0 top-0 h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-300 ease-in-out z-50 shadow-2xl",
+      "fixed left-0 top-0 h-full flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-300 ease-in-out z-50 shadow-2xl",
       isCollapsed ? "w-16" : "w-80"
     )}>
       {/* Header */}
-      <div className="p-6 border-b border-slate-700/50">
-        <div className="flex items-center justify-between">
+      <div className={cn("shrink-0 border-b border-slate-700/50", isCollapsed ? "p-2" : "p-6")}>
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
@@ -70,8 +71,9 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
           )}
           <Button 
             variant="ghost" 
-            size="sm"
+            size="icon"
             onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="text-slate-400 hover:text-white hover:bg-slate-700/50 p-2"
           >
             {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
@@ -80,27 +82,27 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 py-4 space-y-2 h-[88vh]">
+      <ScrollArea className="flex-1 min-h-0 py-4">
         {sidebarSections.map((section) => {
           const SectionIcon = section.icon
           const isExpanded = expandedSections[section.id]
           const hasActiveItem = section.items.some(item => item.path === location.pathname)
 
-          return (
-            <div key={section.id} className="px-3">
-              {/* Section Header */}
+          const sectionButton = (
               <button
-                onClick={() => toggleSection(section.id)}
+                onClick={isCollapsed ? undefined : () => toggleSection(section.id)}
+                aria-label={section.title}
+                title={isCollapsed ? section.title : undefined}
                 className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group",
+                  "w-full flex items-center rounded-xl transition-all duration-200 group",
                   "hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50",
                   hasActiveItem && "bg-gradient-to-r from-slate-700/70 to-slate-600/70",
-                  isCollapsed && "justify-center"
+                  isCollapsed ? "justify-center p-1" : "justify-between p-3"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div className={cn(
-                    "p-2 rounded-lg bg-gradient-to-r transition-all duration-200",
+                    "p-2 shrink-0 rounded-lg bg-gradient-to-r transition-all duration-200",
                     section.color,
                     "group-hover:scale-110 group-hover:shadow-lg"
                   )}>
@@ -127,6 +129,33 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
                   </div>
                 )}
               </button>
+          )
+
+          return (
+            <div key={section.id} className={cn("mb-2", isCollapsed ? "px-2" : "px-3")}>
+              {/* Section Header */}
+              {isCollapsed ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>{sectionButton}</DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-56 z-[60]">
+                    <DropdownMenuLabel>{section.title}</DropdownMenuLabel>
+                    {section.items.map(item => {
+                      const ItemIcon = item.icon
+                      const isActive = item.path === location.pathname
+                      return (
+                        <DropdownMenuItem key={item.id} onSelect={() => {
+                          onSectionChange(item.id)
+                          if (item.path) navigate(item.path)
+                        }} className={cn(isActive && "bg-accent text-accent-foreground")}>
+                          <ItemIcon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                          {item.count && <Badge variant="secondary" className="ml-auto">{item.count}</Badge>}
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : sectionButton}
 
               {/* Section Items */}
               {!isCollapsed && (
@@ -191,70 +220,20 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
                 </div>
               )}
 
-              {/* Collapsed tooltip items */}
-              {isCollapsed && (
-                <div className="relative group">
-                  <div className="absolute left-full top-0 ml-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
-                    <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-3 min-w-48">
-                      <h3 className="font-medium text-white mb-2">{section.title}</h3>
-                      <div className="space-y-1">
-                        {section.items.map((item) => {
-                          const ItemIcon = item.icon
-                          const isActive = item.path === location.pathname
-                          return (
-                            <button
-                              key={item.id}
-                              onClick={() => {
-                                onSectionChange(item.id)
-                                if (item.path) {
-                                  navigate(item.path)
-                                }
-                              }}
-                              className={cn(
-                                "w-full flex items-center justify-between p-2 rounded transition-colors",
-                                isActive
-                                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                                  : "hover:bg-slate-700/50"
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
-                                <ItemIcon className={cn(
-                                  "h-4 w-4",
-                                  isActive ? "text-white" : "text-slate-300"
-                                )} />
-                                <span className={cn(
-                                  "text-sm",
-                                  isActive ? "text-white" : "text-slate-300"
-                                )}>{item.label}</span>
-                              </div>
-                              {item.count && (
-                                <Badge className={cn(
-                                  "text-xs",
-                                  isActive
-                                    ? "bg-white/20 text-white"
-                                    : "bg-slate-600 text-slate-300"
-                                )}>
-                                  {item.count}
-                                </Badge>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           )
         })}
-        <div className="px-3 mt-4">
+        <div className={cn("mt-4", isCollapsed ? "px-2" : "px-3")}>
           {/* <Button ><LogOut/> Logout</Button> */}
           <button
                 onClick={handleLogout}
+                aria-label="Logout"
+                title={isCollapsed ? "Logout" : undefined}
                 
                 className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group",
+                  "w-full flex items-center rounded-xl transition-all duration-200 group",
+                  isCollapsed ? "justify-center p-1" : "justify-between p-3",
                   "hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50",
                  
                 )}
@@ -267,7 +246,7 @@ const AirlineSidebar = ({ activeSection, onSectionChange, isCollapsed, onToggleC
                   )}>
                     <LogOut className="h-5 w-5 text-white" />
                   </div>
-                  <span>Logout</span>
+                  {!isCollapsed && <span>Logout</span>}
                   
                 </div>
               

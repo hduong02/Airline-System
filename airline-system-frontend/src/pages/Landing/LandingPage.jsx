@@ -125,7 +125,7 @@ const LandingPage = () => {
                 <Button variant="ghost" onClick={() => navigate('/login')}>
                   Sign In
                 </Button>
-                <Button onClick={() => navigate('/signup')} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Button onClick={() => navigate('/register')} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                   Get Started
                 </Button>
               </div>
@@ -155,7 +155,7 @@ const LandingPage = () => {
                   <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/login')}>
                     Sign In
                   </Button>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" onClick={() => navigate('/signup')}>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" onClick={() => navigate('/register')}>
                     Get Started
                   </Button>
                 </div>
@@ -216,7 +216,7 @@ const LandingPage = () => {
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8 animate-slide-up animate-delay-700">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
               <Button 
                 size="lg" 
                 className="bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-110 hover-lift animate-pulse-glow"
@@ -234,7 +234,7 @@ const LandingPage = () => {
                 onClick={() => navigate('/airline-onboarding')}
               >
                 <Plane className="h-5 w-5 mr-2 group-hover:rotate-12 transition-transform" />
-                I'm an Airline
+                Register Your Airline
               </Button>
             </div>
 
@@ -601,7 +601,7 @@ const LandingPage = () => {
                 <Button 
                   variant="outline" 
                   className="w-full border-primary text-primary hover:bg-muted"
-                  onClick={() => navigate('/airline/register?plan=starter')}
+                  onClick={() => navigate('/airline-onboarding?plan=starter')}
                 >
                   Start Free Trial
                 </Button>
@@ -654,7 +654,7 @@ const LandingPage = () => {
 
                 <Button 
                   className="w-full bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90 text-primary-foreground"
-                  onClick={() => navigate('/airline/register?plan=professional')}
+                  onClick={() => navigate('/airline-onboarding?plan=professional')}
                 >
                   Get Started
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -780,8 +780,8 @@ const LandingPage = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-2 border-background text-background hover:bg-background hover:text-primary px-8 py-4 text-lg font-semibold rounded-xl transition-all transform hover:scale-105"
-                onClick={() => navigate('/airline/register')}
+                className="bg-transparent border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary px-8 py-4 text-lg font-semibold rounded-xl transition-all transform hover:scale-105"
+                onClick={() => navigate('/airline-onboarding')}
               >
                 <Plane className="h-5 w-5 mr-2" />
                 Register Your Airline
@@ -813,7 +813,7 @@ const LandingPage = () => {
             <div>
               <h3 className="text-foreground font-semibold mb-4">For Airlines</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="/airline/register" className="hover:text-foreground transition-colors">Join Platform</a></li>
+                <li><a href="/airline-onboarding" className="hover:text-foreground transition-colors">Join Platform</a></li>
                 <li><a href="/airline/dashboard" className="hover:text-foreground transition-colors">Dashboard</a></li>
                 <li><a href="/airline/analytics" className="hover:text-foreground transition-colors">Analytics</a></li>
                 <li><a href="/airline/support" className="hover:text-foreground transition-colors">Support</a></li>
