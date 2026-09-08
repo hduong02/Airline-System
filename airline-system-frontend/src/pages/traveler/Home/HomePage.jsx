@@ -1,4 +1,5 @@
 import * as React from "react"
+import { formatDateOnly } from "@/utils/dateOnly"
 import { useNavigate } from "react-router-dom"
 import { Plane, MapPin, Calendar, Users, Shield, CreditCard, HeadphonesIcon, CheckCircle, Tag, Percent, Gift, Star, TrendingDown, Clock } from "lucide-react"
 import FlightSearchBar from "@/pages/traveler/Home/FlightSearchBar"
@@ -7,14 +8,22 @@ import { Badge } from "@/components/ui/badge"
 
 const HomePage = () => {
   const navigate = useNavigate()
+  const [destinationPrefill, setDestinationPrefill] = React.useState(null)
+  const searchFormRef = React.useRef(null)
+  const destinationClickId = React.useRef(0)
+
+  const prefillDestination = code => {
+    setDestinationPrefill({ iataCode: code, clickId: ++destinationClickId.current })
+    searchFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   const handleSearch = (searchData) => {
     // Navigate to search results page with new API parameter format
     const searchParams = new URLSearchParams({
       departureAirportId: searchData.departureAirportId?.toString() || "",
       arrivalAirportId: searchData.arrivalAirportId?.toString() || "",
-      departureDate: searchData.departureDate || "",
-      returnDate: searchData.returnDate?.toISOString().split('T')[0] || "",
+      departureDate: formatDateOnly(searchData.departureDate),
+      returnDate: formatDateOnly(searchData.returnDate),
       numberOfTravellers: searchData.numberOfTravellers?.toString() || "1",
       cabinClass: searchData.cabinClass || "ECONOMY"
     })
@@ -189,8 +198,8 @@ const HomePage = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="max-w-5xl mx-auto">
-            <FlightSearchBar onSearch={handleSearch} />
+          <div ref={searchFormRef} className="w-full scroll-mt-6">
+            <FlightSearchBar onSearch={handleSearch} destinationPrefill={destinationPrefill} />
           </div>
 
           {/* Trust Badges */}
@@ -300,14 +309,14 @@ const HomePage = () => {
               <Card
                 key={index}
                 className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
-                onClick={() => handleSearch({
-                  departureAirportId: "",
-                  arrivalAirportId: destination.code,
-                  departureDate: new Date(),
-                  returnDate: null,
-                  numberOfTravellers: 1,
-                  cabinClass: "ECONOMY"
-                })}
+                role="button" tabIndex={0} aria-label={`Search flights to ${destination.city}`}
+                onClick={() => prefillDestination(destination.code)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    prefillDestination(destination.code)
+                  }
+                }}
               >
                 <div className="relative h-48 overflow-hidden">
                   <img

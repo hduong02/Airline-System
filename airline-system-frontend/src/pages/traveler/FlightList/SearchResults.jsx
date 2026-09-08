@@ -12,25 +12,25 @@ import SortingBar from "./SortingBar";
 import ModernFlightCard from "./ModernFlightCard";
 import {
   SearchResultsLoading,
-  SearchingFlights,
   NoResultsFound,
-  FiltersSkeleton,
 } from "./LoadingStates";
 
 import FlightSearchBar from "@/pages/traveler/Home/FlightSearchBar";
 import { searchFlightsAvailability } from "@/Redux/flightSearch/flightSearchThunk";
-// import { listAllAirports } from "@/Redux/airports/airportsThunk"
 import "./animations.css";
 import { listAllAirports } from "@/Redux/airport/airportThunk";
 import { useEffect } from "react";
 import { parseDateOnly, formatDateOnly } from "@/utils/dateOnly";
-import { clearSearchResults } from "@/Redux/flightSearch/flightSearchSlice";
+import { clearSearchResults, invalidateSearchRequest } from "@/Redux/flightSearch/flightSearchSlice";
 import { getAirlinesForDropdown } from "@/Redux/airline/airlineThunks";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const criteriaKey = searchParams.toString();
+  const previousCriteria = React.useRef(null);
+  const previousRequest = React.useRef(null);
+  const [settledRequest, setSettledRequest] = React.useState(null);
+  const [retryAttempt, setRetryAttempt] = React.useState(0);
   const activeSearch = React.useRef(null);
   const dispatch = useDispatch();
   const { dropdownAirlines } = useSelector((store) => store.airline);
@@ -40,6 +40,7 @@ const SearchResults = () => {
     searchResults,
     loading: searchLoading,
     error,
+    errorPage,
     loadingMore,
   } = useSelector((state) => state.flightSearch);
 
@@ -64,7 +65,6 @@ const SearchResults = () => {
   const [sortBy, setSortBy] = React.useState("price");
   const [sortOrder, setSortOrder] = React.useState("asc");
   const [viewMode, setViewMode] = React.useState("list");
-  const isLoading = false;
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [bookmarkedFlights, setBookmarkedFlights] = React.useState(new Set());
 
@@ -74,8 +74,6 @@ const SearchResults = () => {
     priceRange: { min: 1000, max: 200000 },
     departureTimeRange: "any",
     arrivalTimeRange: "any",
-    maxDuration: 1440, // 24 hours in minutes
-    alliance: "any",
   });
 
   // Build filter parameters for backend API
@@ -102,15 +100,6 @@ const SearchResults = () => {
 
     if (currentFilters.arrivalTimeRange !== "any") {
       params.arrivalTimeRange = currentFilters.arrivalTimeRange;
-    }
-
-    // maxDuration in minutes — only send when user has restricted below 24h
-    if (currentFilters.maxDuration < 1440) {
-      params.maxDuration = currentFilters.maxDuration;
-    }
-
-    if (currentFilters.alliance && currentFilters.alliance !== "any") {
-      params.alliance = currentFilters.alliance;
     }
 
     return params;
@@ -146,32 +135,60 @@ const SearchResults = () => {
     dispatch(getAirlinesForDropdown());
   }, [dispatch]);
 
-  const requestParams = {
+  const baseParams = {
     departureAirportId: searchData.departureAirportId,
     arrivalAirportId: searchData.arrivalAirportId,
     departureDate: formatDateOnly(searchData.departureDate),
     passengers: searchData.passengers,
     cabinClass: searchData.cabinClass,
-    ...buildFilterParams(filters), ...buildSortParams(), size: 20,
+  };
+  const criteriaKey = JSON.stringify(baseParams);
+  const requestParams = {
+    ...baseParams, ...buildFilterParams(filters), ...buildSortParams(), size: 20,
   };
   const requestKey = JSON.stringify(requestParams);
+  const operationKey = `${requestKey}:${retryAttempt}`;
+  const criteriaChanged = previousCriteria.current !== criteriaKey;
   const validSearch = Number.isSafeInteger(requestParams.departureAirportId) && requestParams.departureAirportId > 0 &&
     Number.isSafeInteger(requestParams.arrivalAirportId) && requestParams.arrivalAirportId > 0 &&
     requestParams.departureAirportId !== requestParams.arrivalAirportId && Boolean(searchData.departureDate) &&
     Number.isInteger(searchData.passengers) && searchData.passengers >= 1 && searchData.passengers <= 9 &&
     ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"].includes(searchData.cabinClass);
 
+  const updating = validSearch && (criteriaChanged || previousRequest.current !== operationKey || settledRequest !== operationKey || searchLoading);
+  const displayedResults = criteriaChanged ? { content: [], last: true } : searchResults;
+  const displayedError = !updating && !criteriaChanged ? error : null;
+  const bookingDisabled = updating || Boolean(displayedError && !(errorPage > 0));
+
   React.useEffect(() => {
-    dispatch(clearSearchResults());
+    let cancelled = false;
+    previousRequest.current = operationKey;
+    setSettledRequest(null);
+    if (previousCriteria.current !== criteriaKey || !validSearch) {
+      dispatch(clearSearchResults());
+      previousCriteria.current = criteriaKey;
+    } else {
+      // Invalidate immediately, before the debounce, so late pages cannot append.
+      dispatch(invalidateSearchRequest());
+    }
     if (!validSearch) return;
     const timeout = setTimeout(() => {
-      activeSearch.current = dispatch(searchFlightsAvailability({ ...JSON.parse(requestKey), page: 0 }));
+      const request = dispatch(searchFlightsAvailability({ ...JSON.parse(requestKey), page: 0 }));
+      activeSearch.current = request;
+      Promise.resolve(request).then(() => {
+        if (!cancelled) setSettledRequest(operationKey);
+      });
     }, 300);
-    return () => { clearTimeout(timeout); activeSearch.current?.abort(); };
-  }, [dispatch, criteriaKey, requestKey, validSearch]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      activeSearch.current?.abort();
+      activeSearch.current = null;
+    };
+  }, [dispatch, criteriaKey, requestKey, operationKey, validSearch]);
 
   const loadMore = () => {
-    if (loadingMore || searchLoading || searchResults.last) return;
+    if (loadingMore || bookingDisabled || searchResults.last) return;
     activeSearch.current = dispatch(searchFlightsAvailability({ ...requestParams, page: searchResults.number + 1 }));
   };
 
@@ -194,8 +211,6 @@ const SearchResults = () => {
       priceRange: { min: 1000, max: 200000 },
       departureTimeRange: "any",
       arrivalTimeRange: "any",
-      maxDuration: 1440,
-      alliance: "any",
     });
   };
 
@@ -209,36 +224,6 @@ const SearchResults = () => {
 
   if (!validSearch) return <div role="alert" className="p-8">Invalid search. Choose different airports, a valid date and one to nine passengers. <Button onClick={() => navigate("/traveler")}>Back to search</Button></div>;
 
-  if (searchLoading) {
-    return <SearchingFlights />;
-  }
-
-  // Show error state if search failed
-  if (error && !searchResults?.content?.length) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4 max-w-md mx-auto px-4">
-          <div className="text-6xl mb-4">✈️💨</div>
-          <h2 className="text-2xl font-bold text-foreground">Search Failed</h2>
-          <p className="text-muted-foreground">{error}</p>
-          <div className="space-y-2">
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => navigate("/traveler")}
-              className="w-full bg-muted text-muted-foreground px-6 py-3 rounded-lg font-medium hover:bg-muted/80 transition-colors"
-            >
-              Back to Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -321,6 +306,8 @@ const SearchResults = () => {
           </Button>
         </div>
 
+        <FlightSearchBar key={criteriaKey} initialSearchData={searchData} onSearch={handleSearch} className="mb-6" />
+
         {/* Search Summary Bar */}
         <div className="z-10 pb-3">
           <SearchSummaryBar
@@ -344,10 +331,7 @@ const SearchResults = () => {
               showMobileFilters ? "block" : "hidden lg:block",
             )}
           >
-            {isLoading ? (
-              <FiltersSkeleton />
-            ) : (
-              <div className="relative">
+            <div className="relative">
                 {/* Decorative gradient behind filter */}
                 <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5 rounded-2xl blur-xl"></div>
                 <div className="relative">
@@ -358,12 +342,11 @@ const SearchResults = () => {
                     className="animate-slide-in-left bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-xl"
                   />
                 </div>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Flight Results Section */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-3 space-y-4" aria-busy={updating}>
             {/* Enhanced Sorting Bar with glow effect */}
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-500/10 dark:to-purple-500/10 rounded-xl blur-lg"></div>
@@ -373,7 +356,7 @@ const SearchResults = () => {
                   sortOrder={sortOrder}
                   onSortChange={setSortBy}
                   onSortOrderChange={setSortOrder}
-                  resultsCount={searchResults?.content?.length}
+                  resultsCount={displayedResults?.content?.length}
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
                   className="animate-slide-in-top bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-lg"
@@ -381,11 +364,15 @@ const SearchResults = () => {
               </div>
             </div>
 
-            {error && <p role="alert" className="text-red-600">{error}</p>}
+            {updating && <p role="status" className="text-sm text-muted-foreground">{displayedResults?.content?.length ? "Updating flights…" : "Searching flights…"}</p>}
+            {displayedError && <div role="alert" className="text-red-600">
+              <p>{displayedError}</p>
+              <Button variant="outline" disabled={loadingMore} onClick={() => errorPage > 0 ? loadMore() : setRetryAttempt(attempt => attempt + 1)}>Try Again</Button>
+            </div>}
             {/* Flight Results with enhanced cards */}
-            {isLoading ? (
+            {updating && !displayedResults?.content?.length ? (
               <SearchResultsLoading count={5} />
-            ) : searchResults?.content?.length === 0 ? (
+            ) : displayedError && !displayedResults?.content?.length ? null : displayedResults?.content?.length === 0 ? (
               <NoResultsFound onClearFilters={clearAllFilters} />
             ) : (
               <div
@@ -395,7 +382,7 @@ const SearchResults = () => {
                     : "space-y-4",
                 )}
               >
-                {searchResults?.content?.map((flight, index) => (
+                {displayedResults?.content?.map((flight, index) => (
                   <div
                     key={flight.id}
                     className="animate-fade-in relative group"
@@ -406,6 +393,7 @@ const SearchResults = () => {
                     <div className="relative">
                       <ModernFlightCard
                         flight={flight}
+                        bookingDisabled={bookingDisabled}
                         cabinClass={searchData?.cabinClass}
                         onBookmark={handleBookmark}
                         isBookmarked={bookmarkedFlights.has(flight.id)}
@@ -419,14 +407,14 @@ const SearchResults = () => {
             )}
 
             {/* Load the next backend page */}
-            {searchResults?.content?.length > 0 && !searchResults.last && (
+            {displayedResults?.content?.length > 0 && !displayedResults.last && (
               <div className="flex justify-center pt-8">
                 <div className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition-opacity duration-300"></div>
                   <Button
                     variant="outline"
                     onClick={loadMore}
-                    disabled={loadingMore || searchLoading}
+                    disabled={loadingMore || bookingDisabled}
                     className="relative px-8 py-3 bg-white dark:bg-slate-800 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-800 transition-all duration-200 shadow-lg hover:shadow-xl border-blue-200 dark:border-blue-800 font-semibold"
                   >
                     {loadingMore ? "Loading flights..." : "Load more flights"}

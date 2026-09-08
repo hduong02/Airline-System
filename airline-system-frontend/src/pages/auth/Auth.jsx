@@ -1,22 +1,8 @@
 import React from 'react';
-import { Formik, Form } from 'formik';
-import * as Yup from 'yup';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import InputField from '../../components/InputField';
-import PasswordField from '../../components/PasswordField';
-import { login } from '../../Redux/auth/authThunk';
 import {
-  Loader2,
   Plane,
-  Mail,
-  Lock,
-  ArrowRight,
   Shield,
   Globe,
   Users,
@@ -37,14 +23,14 @@ const Auth = ({isLogin}) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-72 h-72 bg-blue-500/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse particle-1"></div>
-        <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000 particle-2"></div>
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-72 h-72 bg-pink-500/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-4000"></div>
-        <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-cyan-500/10 rounded-full mix-blend-multiply filter blur-2xl opacity-50 animate-float animation-delay-1000"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-indigo-500/10 rounded-full mix-blend-multiply filter blur-2xl opacity-50 animate-float animation-delay-500"></div>
-      </div>
+      {/* Static gradients keep the background inexpensive to render. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 0% 0%, rgb(59 130 246 / 0.14), transparent 35%), radial-gradient(circle at 100% 0%, rgb(168 85 247 / 0.14), transparent 35%), radial-gradient(circle at 50% 100%, rgb(236 72 153 / 0.14), transparent 35%)'
+        }}
+      />
 
       {/* Grid pattern overlay */}
       <div
@@ -56,7 +42,7 @@ const Auth = ({isLogin}) => {
 
       <div className="relative z-10 min-h-screen flex">
         {/* Left side - Branding and Features */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-12 xl:px-20 animate-slide-in-left">
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-12 xl:px-20">
           <div className="max-w-md">
             {/* Logo and brand */}
             <div className="flex items-center mb-8">
@@ -86,8 +72,7 @@ const Auth = ({isLogin}) => {
               {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="flex items-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/15 transition-all duration-300 hover-lift animate-fade-in"
-                  style={{ animationDelay: `${(index + 1) * 200}ms` }}
+                  className="flex items-center p-4 bg-white/10 rounded-xl border border-white/20 hover:bg-white/15 transition-colors duration-150"
                 >
                   <div className="bg-gradient-to-r from-blue-400 to-purple-400 p-2 rounded-lg">
                     <feature.icon className="h-5 w-5 text-white" />
@@ -119,9 +104,9 @@ const Auth = ({isLogin}) => {
         </div>
 
         {/* Right side - Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 animate-slide-in-right">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
           <div className="w-full max-w-md">
-            <Card className="bg-white/95 backdrop-blur-xl border-0 shadow-2xl overflow-hidden animate-scale-in hover-lift">
+            <Card className="bg-white border-0 shadow-2xl overflow-hidden">
               <CardContent className="p-8">
                 {/* Mobile logo */}
                 <div className="lg:hidden flex items-center justify-center mb-8">

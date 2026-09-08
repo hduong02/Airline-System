@@ -31,7 +31,7 @@ test('search callback receives local calendar date and rejects identical airport
   tree = component.render({onSearch: data => calls.push(data)});
   findAll(tree, n => n.type === 'Button' && findAll(n, child => child.type === 'span' && child.props.children.includes('Search Flights')).length > 0)[0].props.onClick();
   assert.equal(calls[0].departureDate, '2026-10-15');
-  findAll(tree, n => n.type === 'Select')[0].props.onValueChange('2');
+  findAll(tree, n => n.type === 'AirportPicker')[0].props.onChange(2);
   tree = component.render({onSearch: data => calls.push(data)});
   findAll(tree, n => n.type === 'Button' && findAll(n, child => child.type === 'span' && child.props.children.includes('Search Flights')).length > 0)[0].props.onClick();
   assert.equal(calls.length, 1);
@@ -50,6 +50,7 @@ test('load more appends pages, ignores old errors, and permits retry after failu
   assert.equal(state.error, null); assert.equal(state.loadingMore, true);
   state = reducer(state, search.rejected(new Error('failure'), 'more', {page: 1}, 'Offline'));
   assert.equal(state.searchResults.number, 0); assert.equal(state.error, 'Offline');
+  assert.equal(state.errorPage, 1);
   state = reducer(state, search.pending('retry', {page: 1}));
   state = reducer(state, search.fulfilled({content: [{id: 1}, {id: 2}], number: 1, last: true}, 'retry', {page: 1}));
   assert.deepEqual(state.searchResults.content.map(f => f.id), [1, 2]);
@@ -122,7 +123,7 @@ test('URL changes refetch, abort previous searches, and modified search uses can
   const component = await loadComponent('pages/traveler/FlightList/SearchResults.jsx', {
     useSearchParams: () => [params], useNavigate: () => route => routes.push(route), useDispatch: () => dispatch,
     useSelector: selector => selector(state), parseDateOnly, formatDateOnly,
-    clearSearchResults: () => ({kind: 'clear'}), getAirlinesForDropdown: () => ({}),
+    clearSearchResults: () => ({kind: 'clear'}), invalidateSearchRequest: () => ({kind: 'invalidate'}), getAirlinesForDropdown: () => ({}),
     searchFlightsAvailability: data => ({kind: 'search', data}),
   });
   component.render(); component.flushEffects(); timers.shift()();
@@ -134,6 +135,7 @@ test('URL changes refetch, abort previous searches, and modified search uses can
   const destination = new URLSearchParams(routes[0].split('?')[1]);
   assert.equal(destination.get('numberOfTravellers'), '4'); assert.equal(destination.get('departureDate'), '2026-10-17');
   assert.equal(requests.length, 2);
+  await Promise.resolve();
   state.flightSearch.searchResults = {content: [{id: 5}], number: 0, last: false};
   tree = component.render();
   const button = findAll(tree, n => n.type === 'Button' && n.props.children.includes('Load more flights'))[0];
@@ -189,4 +191,106 @@ test('aircraft delete asks for confirmation and backs up when the last row on a 
   await findAll(tree, n => n.type === 'Button' && n.props.variant === 'destructive')[0].props.onClick();
   assert.deepEqual(actions, [{kind: 'delete', id: 9}, {kind: 'page', page: 1}]);
   assert.equal(findAll(component.render(), n => n.type === 'Dialog')[0].props.open, false);
+});
+
+
+test('replacement searches retain pages and invalidation rejects late pagination responses', async () => {
+  const {invalidateSearchRequest, clearSearchResults} = await server.ssrLoadModule('/src/Redux/flightSearch/flightSearchSlice.js');
+  let state = reducer(undefined, search.pending('first', {page: 0}));
+  state = reducer(state, search.fulfilled({content: [{id: 1}], number: 0, last: false}, 'first', {page: 0}));
+  state = reducer(state, search.pending('more', {page: 1}));
+  state = reducer(state, invalidateSearchRequest());
+  state = reducer(state, search.fulfilled({content: [{id: 9}], number: 1}, 'more', {page: 1}));
+  assert.deepEqual(state.searchResults.content, [{id: 1}]);
+  state = reducer(state, search.pending('refresh', {page: 0}));
+  assert.deepEqual(state.searchResults.content, [{id: 1}]);
+  state = reducer(state, search.rejected(new Error('Offline'), 'refresh', {page: 0}, 'Offline'));
+  assert.deepEqual(state.searchResults.content, [{id: 1}]);
+  state = reducer(state, search.pending('retry', {page: 0}));
+  state = reducer(state, search.fulfilled({content: [], number: 0, last: true}, 'retry', {page: 0}));
+  assert.deepEqual(state.searchResults.content, []);
+  assert.equal(state.error, null);
+  state = reducer(state, clearSearchResults());
+  assert.deepEqual(state.searchResults.content, []);
+});
+
+test('filters keep controls and cards mounted, block stale booking during debounce, and retry errors', async (t) => {
+  const timers = []; const requests = []; const actions = []; const completions = [];
+  t.mock.method(globalThis, 'setTimeout', fn => { timers.push(fn); return fn; });
+  t.mock.method(globalThis, 'clearTimeout', () => {});
+  let params = new URLSearchParams('departureAirportId=1&arrivalAirportId=2&departureDate=2026-10-15');
+  const state = {airline: {dropdownAirlines: []}, airport: {airports: [{id: 1}, {id: 2}]},
+    flightSearch: {searchResults: {content: [], number: 0, last: true}, loading: false, error: null, loadingMore: false}};
+  const dispatch = action => {
+    actions.push(action.kind);
+    if (action.kind === 'search') {
+      requests.push(action.data);
+      const promise = new Promise(resolve => completions.push(resolve));
+      promise.abort = () => {};
+      return promise;
+    }
+  };
+  const component = await loadComponent('pages/traveler/FlightList/SearchResults.jsx', {
+    useSearchParams: () => [params], useNavigate: () => () => {}, useDispatch: () => dispatch,
+    useSelector: selector => selector(state), parseDateOnly, formatDateOnly,
+    clearSearchResults: () => ({kind: 'clear'}), invalidateSearchRequest: () => ({kind: 'invalidate'}),
+    getAirlinesForDropdown: () => ({}), searchFlightsAvailability: data => ({kind: 'search', data}),
+  });
+  let tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'SearchResultsLoading').length, 1);
+  assert.equal(findAll(tree, n => n.type === 'NoResultsFound').length, 0);
+  assert.equal(findAll(tree, n => n.type === 'FiltersSidebar').length, 1);
+  component.flushEffects(); timers.shift()();
+  state.flightSearch.searchResults = {content: [{id: 1}], number: 0, last: false};
+  completions.shift()(); await Promise.resolve();
+  tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'ModernFlightCard')[0].props.bookingDisabled, false);
+  findAll(tree, n => n.type === 'SortingBar')[0].props.onSortChange('duration');
+  tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'ModernFlightCard')[0].props.bookingDisabled, true);
+  const more = findAll(tree, n => n.type === 'Button' && n.props.children.includes('Load more flights'))[0];
+  more.props.onClick(); assert.equal(requests.length, 1); assert.equal(more.props.disabled, true);
+  assert.equal(findAll(tree, n => n.type === 'FlightSearchBar').length, 1);
+  component.flushEffects();
+  assert.equal(actions.filter(kind => kind === 'clear').length, 1);
+  assert.equal(actions.at(-1), 'invalidate');
+  // Returning to the last successful sort must still block booking during debounce.
+  findAll(tree, n => n.type === 'SortingBar')[0].props.onSortChange('price');
+  tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'ModernFlightCard')[0].props.bookingDisabled, true);
+  component.flushEffects();
+  timers.shift(); // Discard the cancelled duration request timer.
+  timers.shift()();
+  state.flightSearch.error = 'Offline'; completions.shift()(); await Promise.resolve();
+  tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'ModernFlightCard').length, 1);
+  findAll(tree, n => n.type === 'Button' && n.props.children.includes('Try Again'))[0].props.onClick();
+  tree = component.render(); component.flushEffects(); timers.shift()();
+  state.flightSearch.error = null;
+  state.flightSearch.searchResults = {content: [], number: 0, last: true};
+  completions.shift()(); await Promise.resolve(); tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'NoResultsFound').length, 1);
+  params = new URLSearchParams('departureAirportId=2&arrivalAirportId=1&departureDate=2026-10-16');
+  state.flightSearch.searchResults = {content: [{id: 1}], number: 0, last: true};
+  tree = component.render();
+  assert.equal(findAll(tree, n => n.type === 'ModernFlightCard').length, 0);
+  component.flushEffects();
+  assert.equal(actions.filter(kind => kind === 'clear').length, 2);
+  component.unmount();
+});
+
+test('refreshing closes an open pricing modal and blocks selecting an outdated flight', async () => {
+  const component = await loadComponent('pages/traveler/FlightList/ModernFlightCard.jsx');
+  const props = {flight: {id: 1, airlineName: 'Airline', fare: {}, departureDateTime: '2026-10-15T08:00:00', arrivalDateTime: '2026-10-15T10:00:00'}};
+  let tree = component.render(props);
+  const select = tree => findAll(tree, n => n.type === 'Button' && n.props.children.includes('Select Flight'))[0];
+  select(tree).props.onClick(); tree = component.render(props);
+  assert.equal(findAll(tree, n => n.type === 'FlightPricingModal').length, 1);
+  tree = component.render({...props, bookingDisabled: true});
+  assert.equal(select(tree).props.disabled, true);
+  assert.equal(findAll(tree, n => n.type === 'FlightPricingModal').length, 0);
+  component.flushEffects();
+  select(tree).props.onClick();
+  tree = component.render({...props, bookingDisabled: true});
+  assert.equal(findAll(tree, n => n.type === 'FlightPricingModal').length, 0);
 });

@@ -6,9 +6,7 @@ import {
   RefreshCw,
   Plane,
   Clock,
-  Star,
   DollarSign,
-  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,16 +23,40 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const MIN_PRICE = 1000;
 const MAX_PRICE = 200000;
-const MAX_DURATION = 1440; // 24h in minutes
 
 const formatPrice = (value) =>
   new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
 
-const formatDuration = (minutes) => {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-};
+// Keep this type stable so search updates preserve controls and their animations.
+const FilterSection = ({ title, id, icon, children, count, expanded, onToggle }) => (
+  <div className="border-b border-border last:border-b-0">
+    <Button
+      onClick={() => onToggle(id)}
+      className="w-full flex items-center justify-between px-4 py-3 text-left rounded-none h-auto"
+      variant="ghost"
+    >
+      <div className="flex items-center gap-2">
+        {React.createElement(icon, { className: "h-4 w-4 text-primary" })}
+        <span className="font-medium text-sm text-foreground">{title}</span>
+        {count > 0 && (
+          <Badge variant="default" className="h-5 px-1.5 text-xs bg-primary text-primary-foreground">
+            {count}
+          </Badge>
+        )}
+      </div>
+      {expanded ? (
+        <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      ) : (
+        <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      )}
+    </Button>
+    {expanded && (
+      <div className="px-4 pb-4 animate-in slide-in-from-top-1 fade-in duration-200">
+        {children}
+      </div>
+    )}
+  </div>
+);
 
 const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
   const [expandedSections, setExpandedSections] = React.useState({
@@ -42,8 +64,6 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
     airlines: true,
     departure: true,
     arrival: false,
-    duration: false,
-    other: false,
   });
 
   const toggleSection = (section) => {
@@ -60,8 +80,6 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
       priceRange: { min: MIN_PRICE, max: MAX_PRICE },
       departureTimeRange: "any",
       arrivalTimeRange: "any",
-      maxDuration: MAX_DURATION,
-      alliance: "any",
     });
   };
 
@@ -74,8 +92,6 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
     airlines: filters.airlines.length,
     departure: filters.departureTimeRange !== "any" ? 1 : 0,
     arrival: filters.arrivalTimeRange !== "any" ? 1 : 0,
-    duration: filters.maxDuration < MAX_DURATION ? 1 : 0,
-    other: filters.alliance && filters.alliance !== "any" ? 1 : 0,
   };
 
   const totalActive = Object.values(activeCounts).reduce((a, b) => a + b, 0);
@@ -87,49 +103,6 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
     { value: "evening", label: "Evening", icon: "🌆", sub: "6 PM – 12 AM" },
     { value: "night", label: "Night", icon: "🌙", sub: "12 AM – 6 AM" },
   ];
-
-  const alliances = [
-    { value: "any", label: "Any Alliance" },
-    { value: "star", label: "Star Alliance" },
-    { value: "oneworld", label: "Oneworld" },
-    { value: "skyteam", label: "SkyTeam" },
-  ];
-
-  const FilterSection = ({ title, id, icon: Icon, children }) => {
-    const count = activeCounts[id] || 0;
-    return (
-      <div className="border-b border-border last:border-b-0">
-        <Button
-          onClick={() => toggleSection(id)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left rounded-none h-auto"
-          variant="ghost"
-        >
-          <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm text-foreground">{title}</span>
-            {count > 0 && (
-              <Badge
-                variant="default"
-                className="h-5 px-1.5 text-xs bg-primary text-primary-foreground"
-              >
-                {count}
-              </Badge>
-            )}
-          </div>
-          {expandedSections[id] ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          )}
-        </Button>
-        {expandedSections[id] && (
-          <div className="px-4 pb-4 animate-in slide-in-from-top-1 fade-in duration-200">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <Card className={cn("h-fit sticky top-24 overflow-hidden", className)}>
@@ -160,7 +133,7 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
 
       <CardContent className="p-0">
         {/* ── Price Range ─────────────────────────────── */}
-        <FilterSection title="Price Range" id="price" icon={DollarSign}>
+        <FilterSection title="Price Range" id="price" icon={DollarSign} count={activeCounts.price} expanded={expandedSections.price} onToggle={toggleSection}>
           <div className="space-y-3 pt-1">
             {/* Current range label */}
             <div className="flex items-center justify-between">
@@ -237,7 +210,7 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
         </FilterSection>
 
         {/* ── Airlines ────────────────────────────────── */}
-        <FilterSection title="Airlines" id="airlines" icon={Plane}>
+        <FilterSection title="Airlines" id="airlines" icon={Plane} count={activeCounts.airlines} expanded={expandedSections.airlines} onToggle={toggleSection}>
           {airlines && airlines.length > 0 ? (
             <ScrollArea className="h-[180px] pr-2">
               <div className="space-y-1 pt-1">
@@ -322,7 +295,7 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
         </FilterSection>
 
         {/* ── Departure Time ──────────────────────────── */}
-        <FilterSection title="Departure Time" id="departure" icon={Clock}>
+        <FilterSection title="Departure Time" id="departure" icon={Clock} count={activeCounts.departure} expanded={expandedSections.departure} onToggle={toggleSection}>
           <RadioGroup
             value={filters.departureTimeRange}
             onValueChange={(value) => updateFilter("departureTimeRange", value)}
@@ -365,7 +338,7 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
         </FilterSection>
 
         {/* ── Arrival Time ────────────────────────────── */}
-        <FilterSection title="Arrival Time" id="arrival" icon={Clock}>
+        <FilterSection title="Arrival Time" id="arrival" icon={Clock} count={activeCounts.arrival} expanded={expandedSections.arrival} onToggle={toggleSection}>
           <RadioGroup
             value={filters.arrivalTimeRange}
             onValueChange={(value) => updateFilter("arrivalTimeRange", value)}
@@ -405,96 +378,6 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
           </RadioGroup>
         </FilterSection>
 
-        {/* ── Max Duration ────────────────────────────── */}
-        <FilterSection title="Max Duration" id="duration" icon={Timer}>
-          <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Up to</span>
-              <span
-                className={cn(
-                  "text-sm font-semibold px-2 py-0.5 rounded-full",
-                  filters.maxDuration < MAX_DURATION
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground",
-                )}
-              >
-                {filters.maxDuration >= MAX_DURATION
-                  ? "No limit"
-                  : formatDuration(filters.maxDuration)}
-              </span>
-            </div>
-
-            <Slider
-              value={[filters.maxDuration]}
-              onValueChange={(val) => updateFilter("maxDuration", val[0])}
-              min={60}
-              max={MAX_DURATION}
-              step={30}
-              className="w-full"
-            />
-
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1h</span>
-              <span>6h</span>
-              <span>12h</span>
-              <span>24h</span>
-            </div>
-
-            {/* Quick preset buttons */}
-            <div className="flex gap-1.5 flex-wrap">
-              {[180, 360, 480, 720].map((mins) => (
-                <button
-                  key={mins}
-                  onClick={() => updateFilter("maxDuration", mins)}
-                  className={cn(
-                    "text-xs px-2 py-1 rounded-md border transition-colors",
-                    filters.maxDuration === mins
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
-                  )}
-                >
-                  {formatDuration(mins)}
-                </button>
-              ))}
-              <button
-                onClick={() => updateFilter("maxDuration", MAX_DURATION)}
-                className={cn(
-                  "text-xs px-2 py-1 rounded-md border transition-colors",
-                  filters.maxDuration === MAX_DURATION
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
-                )}
-              >
-                Any
-              </button>
-            </div>
-          </div>
-        </FilterSection>
-
-        {/* ── Alliance ────────────────────────────────── */}
-        <FilterSection title="Alliance" id="other" icon={Star}>
-          <div className="space-y-2 pt-1">
-            <div className="grid grid-cols-1 gap-1">
-              {alliances.map((a) => {
-                const isSelected = (filters.alliance || "any") === a.value;
-                return (
-                  <button
-                    key={a.value}
-                    onClick={() => updateFilter("alliance", a.value)}
-                    className={cn(
-                      "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors border",
-                      isSelected
-                        ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                        : "bg-transparent border-transparent hover:bg-muted/60 text-foreground",
-                    )}
-                  >
-                    {a.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </FilterSection>
       </CardContent>
     </Card>
   );

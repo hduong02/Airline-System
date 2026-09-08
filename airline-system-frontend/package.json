@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:traveler-search": "node --test tests/traveler-search.test.mjs",
     "test:checkout": "node --test tests/checkout.test.mjs",
     "test:payment-results": "node --test tests/payment-results.test.mjs",
     "test:session": "node --test tests/session.test.mjs",

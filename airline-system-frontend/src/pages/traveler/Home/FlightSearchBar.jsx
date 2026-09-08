@@ -11,28 +11,30 @@ import { useSelector, useDispatch } from "react-redux"
 import { listAllAirports } from "@/Redux/airport/airportThunk"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import AirportPicker from "./AirportPicker"
 
-const FlightSearchBar = ({ onSearch, className }) => {
+const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearchData }) => {
   const dispatch = useDispatch()
-  const { airports } = useSelector((state) => state.airport)
+  const { airports, loading: airportsLoading, error: airportsError } = useSelector((state) => state.airport)
 
   const [tripType, setTripType] = React.useState("oneWay") // roundTrip, oneWay, multiCity
   const [specialFare, setSpecialFare] = React.useState("regular")
   const [searchData, setSearchData] = React.useState({
-    departureAirportId: "",
-    arrivalAirportId: "",
-    departureDate: new Date(), // Default to today
+    departureAirportId: initialSearchData?.departureAirportId || "",
+    arrivalAirportId: initialSearchData?.arrivalAirportId || "",
+    departureDate: initialSearchData?.departureDate || new Date(), // Default to today
     returnDate: null,
-    numberOfTravellers: 1,
-    cabinClass: "ECONOMY"
+    numberOfTravellers: initialSearchData?.passengers || 1,
+    cabinClass: initialSearchData?.cabinClass || "ECONOMY"
   })
 
   const [departureDateOpen, setDepartureDateOpen] = React.useState(false)
   const [searchError, setSearchError] = React.useState("")
   const [passengersOpen, setPassengersOpen] = React.useState(false)
-  const [fromAirportSearch, setFromAirportSearch] = React.useState("")
-  const [toAirportSearch, setToAirportSearch] = React.useState("")
-  const [defaultsSet, setDefaultsSet] = React.useState(false)
+  const airportsTouched = React.useRef(false)
+  const defaultsSet = React.useRef(false)
+  const appliedPrefill = React.useRef(null)
+  const [airportsLoaded, setAirportsLoaded] = React.useState(airports.length > 0)
 
   const cabinClasses = [
     { value: "ECONOMY", label: "Economy" },
@@ -81,41 +83,63 @@ const FlightSearchBar = ({ onSearch, className }) => {
 
   // Load airports on component mount
   React.useEffect(() => {
-    dispatch(listAllAirports())
+    if (airports.length || airportsLoading) return
+    let mounted = true
+    Promise.resolve(dispatch(listAllAirports())).then(() => {
+      if (mounted) setAirportsLoaded(true)
+    })
+    return () => { mounted = false }
   }, [dispatch])
 
-  // Set default airports after airports are loaded
+  // Defaults fill only untouched fields; a queued destination always takes precedence.
   React.useEffect(() => {
-    if (airports.length > 0 && !defaultsSet) {
-      // Find  airport (HAN)
-      const hanoiAirport = airports.find(
-        airport => airport.iataCode === "HAN" ||
-          airport.city?.name?.toLowerCase().includes("hanoi")
-      )
+    if (!airports.length || airportsLoading || airportsTouched.current || defaultsSet.current) return
+    defaultsSet.current = true
+    const from = airports.find(airport => airport.iataCode === "HAN")
+    const to = airports.find(airport => airport.iataCode === "SGN")
+    setSearchData(prev => ({
+      ...prev,
+      departureAirportId: prev.departureAirportId || (from ? Number(from.id) : ""),
+      arrivalAirportId: prev.arrivalAirportId || (!destinationPrefill && to ? Number(to.id) : "")
+    }))
+  }, [airports, airportsLoading, destinationPrefill])
 
-      // Find  airport (SGN)
-      const hoChiMinhAirport = airports.find(
-        airport => airport.iataCode === "SGN" ||
-          airport.city?.name?.toLowerCase().includes("ho chi minh")
-      )
-
-      if (hanoiAirport && hoChiMinhAirport) {
-        setSearchData(prev => ({
-          ...prev,
-          departureAirportId: hanoiAirport.id,
-          arrivalAirportId: hoChiMinhAirport.id
-        }))
-        setDefaultsSet(true)
-      }
+  React.useEffect(() => {
+    if (!destinationPrefill || airportsLoading || appliedPrefill.current === destinationPrefill.clickId) return
+    // Wait for the initial airport request before declaring a destination unavailable.
+    if (!airports.length && !airportsError && !airportsLoaded) return
+    appliedPrefill.current = destinationPrefill.clickId
+    const destination = airports.find(airport => airport.iataCode?.toUpperCase() === destinationPrefill.iataCode?.toUpperCase())
+    if (!destination) {
+      setSearchError("This destination is currently unavailable. Please choose another airport.")
+      return
     }
-  }, [airports, defaultsSet])
+    const id = Number(destination.id)
+    const originId = searchData.departureAirportId || (!airportsTouched.current && airports.find(airport => airport.iataCode === "HAN")?.id)
+    const sameOrigin = Number(originId) === id
+    airportsTouched.current = true
+    setSearchData(prev => ({ ...prev, arrivalAirportId: id, departureAirportId: Number(prev.departureAirportId) === id ? "" : prev.departureAirportId }))
+    setSearchError(sameOrigin ? "Choose a different departure airport for this destination." : "")
+  }, [destinationPrefill, airports, airportsLoading, airportsError, airportsLoaded, searchData.departureAirportId])
 
-
+  const selectAirport = (field, id) => {
+    airportsTouched.current = true
+    setSearchData(prev => ({ ...prev, [field]: id }))
+    setSearchError("")
+  }
 
   const handleSearch = () => {
-    if (String(searchData.departureAirportId) === String(searchData.arrivalAirportId)) {
-      setSearchError("Choose different departure and arrival airports");
-      return;
+    const departureId = Number(searchData.departureAirportId)
+    const arrivalId = Number(searchData.arrivalAirportId)
+    if (!Number.isSafeInteger(departureId) || departureId <= 0 || !Number.isSafeInteger(arrivalId) || arrivalId <= 0 ||
+        !airports.some(airport => Number(airport.id) === departureId) || !airports.some(airport => Number(airport.id) === arrivalId) ||
+        !formatDateOnly(searchData.departureDate)) {
+      setSearchError("Choose valid departure and arrival airports and a departure date.")
+      return
+    }
+    if (departureId === arrivalId) {
+      setSearchError("Choose different departure and arrival airports")
+      return
     }
     setSearchError("");
     if (searchData.departureAirportId && searchData.arrivalAirportId && searchData.departureDate) {
@@ -123,12 +147,11 @@ const FlightSearchBar = ({ onSearch, className }) => {
       const formattedDate = formatDateOnly(searchData.departureDate)
 
       const searchParams = {
-        departureAirportId: searchData.departureAirportId,
-        arrivalAirportId: searchData.arrivalAirportId,
+        departureAirportId: departureId,
+        arrivalAirportId: arrivalId,
         numberOfTravellers: searchData.numberOfTravellers,
         cabinClass: searchData.cabinClass,
-        departureDate: formattedDate,
-        specialFare: specialFare
+        departureDate: formattedDate
       }
 
       onSearch?.(searchParams)
@@ -136,13 +159,13 @@ const FlightSearchBar = ({ onSearch, className }) => {
   }
 
   const handleSwapAirports = () => {
+    airportsTouched.current = true
+    setSearchError("")
     setSearchData(prev => ({
       ...prev,
       departureAirportId: prev.arrivalAirportId,
       arrivalAirportId: prev.departureAirportId
     }))
-    setFromAirportSearch(toAirportSearch)
-    setToAirportSearch(fromAirportSearch)
   }
 
   const formatDate = (date) => {
@@ -164,22 +187,18 @@ const FlightSearchBar = ({ onSearch, className }) => {
     }))
   }
 
-  const getSelectedAirport = (airportId) => {
-    return airports.find(airport => airport.id === parseInt(airportId))
-  }
-
   return (
     <div className={cn(
       "bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-800",
       className
     )}>
       {/* Trip Type Tabs */}
-      <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-8 py-6 border-b border-gray-200 dark:border-slate-700">
+      <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-3 sm:px-8 py-6 border-b border-gray-200 dark:border-slate-700">
         <div className="flex space-x-2 bg-white dark:bg-slate-800 rounded-2xl p-2 shadow-sm border border-gray-200 dark:border-slate-700">
           <button
             disabled title="Round trips are not available yet"
             className={cn(
-              "px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 relative overflow-hidden",
+              "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 relative overflow-hidden",
               tripType === "roundTrip"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
@@ -190,7 +209,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
           <button
             onClick={() => setTripType("oneWay")}
             className={cn(
-              "px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
+              "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
               tripType === "oneWay"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
@@ -201,7 +220,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
           <button
             disabled title="Multi-city trips are not available yet"
             className={cn(
-              "px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
+              "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
               tripType === "multiCity"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
@@ -212,60 +231,25 @@ const FlightSearchBar = ({ onSearch, className }) => {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-3 sm:p-8">
         {searchError && <p role="alert" className="text-red-600 mb-4">{searchError}</p>}
         {/* Combined Flight Search Section - All in One Line */}
         <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-800 rounded-2xl p-1 mb-6">
-          <div className="flex items-center justify-between ">
+          <div className="flex flex-wrap items-center justify-between gap-y-3">
             {/* From */}
-            <div className="relative group">
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-blue-400 dark:hover:border-blue-600 h-full">
+            <div className="relative group min-w-0 w-[calc(50%-2.5rem)] lg:w-0 lg:flex-1">
+              <div className="p-2 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-blue-400 dark:hover:border-blue-600 h-full">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
+                  <div className="hidden sm:block shrink-0 p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
                     <Plane className="h-5 w-5 text-white" />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">From</label>
-                    <Select
-                      value={searchData.departureAirportId.toString()}
-                      onValueChange={(value) => setSearchData(prev => ({ ...prev, departureAirportId: parseInt(value) }))}
-                    >
-                      <SelectTrigger className="border-0 shadow-none p-0 h-auto focus:ring-0 bg-transparent">
-                        <div className="text-left">
-                          <div className="text-2xl font-black text-gray-900 dark:text-white mb-0.5">
-                            {searchData.departureAirportId ? getSelectedAirport(searchData.departureAirportId)?.iataCode : "---"}
-                          </div>
-                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
-                            {searchData.departureAirportId ? getSelectedAirport(searchData.departureAirportId)?.city?.name : "Select City"}
-                          </div>
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent className="w-[450px] max-h-[400px]">
-                        {airports.map((airport) => (
-                          <SelectItem key={airport.id} value={airport.id.toString()} className="py-4 cursor-pointer">
-
-                            <div className="flex items-center gap-4">
-
-                              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                                <MapPin className="h-6 w-6 text-white" />
-                              </div>
-
-                              <div className="flex-1">
-
-                                <div className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                                  {airport.iataCode} - {airport.city?.name}
-                                </div>
-
-                                <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                                  {airport.name}
-                                </div>
-
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <AirportPicker
+                      label="From" airports={airports} value={Number(searchData.departureAirportId) || null}
+                      excludedId={Number(searchData.arrivalAirportId) || null}
+                      onChange={id => selectAirport("departureAirportId", id)} loading={airportsLoading} error={airportsError}
+                    />
                   </div>
                 </div>
               </div>
@@ -274,6 +258,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
             {/* Swap Button */}
             <div className="flex justify-center items-center px-2">
               <button
+                aria-label="Swap departure and arrival airports"
                 onClick={handleSwapAirports}
                 className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-110 transition-all duration-300 flex items-center justify-center group relative overflow-hidden"
               >
@@ -283,48 +268,19 @@ const FlightSearchBar = ({ onSearch, className }) => {
             </div>
 
             {/* To */}
-            <div className="relative group">
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-green-400 dark:hover:border-green-600 h-full">
+            <div className="relative group min-w-0 w-[calc(50%-2.5rem)] lg:w-0 lg:flex-1">
+              <div className="p-2 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-green-400 dark:hover:border-green-600 h-full">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
+                  <div className="hidden sm:block shrink-0 p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
                     <Plane className="h-5 w-5 text-white rotate-90" />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">To</label>
-                    <Select
-                      value={searchData.arrivalAirportId.toString()}
-                      onValueChange={(value) => setSearchData(prev => ({ ...prev, arrivalAirportId: parseInt(value) }))}
-                    >
-                      <SelectTrigger className="border-0 shadow-none p-0 h-auto focus:ring-0 bg-transparent">
-                        <div className="text-left">
-                          <div className="text-2xl font-black text-gray-900 dark:text-white mb-0.5">
-                            {searchData.arrivalAirportId ? getSelectedAirport(searchData.arrivalAirportId)?.iataCode : "---"}
-                          </div>
-                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
-                            {searchData.arrivalAirportId ? getSelectedAirport(searchData.arrivalAirportId)?.city?.name : "Select City"}
-                          </div>
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent className="w-[450px] max-h-[400px]">
-                        {airports.filter(airport => airport.id !== searchData.departureAirportId).map((airport) => (
-                          <SelectItem key={airport.id} value={airport.id.toString()} className="py-4 cursor-pointer">
-                            <div className="flex items-center gap-4">
-                              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                                <MapPin className="h-6 w-6 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                                  {airport.iataCode} - {airport.city?.name}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                                  {airport.name}
-                                </div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <AirportPicker
+                      label="To" airports={airports} value={Number(searchData.arrivalAirportId) || null}
+                      excludedId={Number(searchData.departureAirportId) || null}
+                      onChange={id => selectAirport("arrivalAirportId", id)} loading={airportsLoading} error={airportsError}
+                    />
                   </div>
                 </div>
               </div>
@@ -338,7 +294,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
                     <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg">
                       <CalendarDays className="h-4 w-4 text-white" />
                     </div>
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <label className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-widest mb-1 block">Departure</label>
                       <div className="flex items-baseline gap-1">
                         <div className="text-xl font-black text-gray-900 dark:text-white">
@@ -387,7 +343,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
                     <div className="p-2 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow-lg">
                       <Users className="h-4 w-4 text-white" />
                     </div>
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <label className="text-xs font-bold text-pink-700 dark:text-pink-400 uppercase tracking-widest mb-1 block">Travelers</label>
                       <div className="text-xl font-black text-gray-900 dark:text-white">
                         {searchData.numberOfTravellers}
@@ -445,7 +401,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
                 <div className="p-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg shadow-lg">
                   <Plane className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <label className="text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-widest mb-1 block">Class</label>
                   <Select
                     value={searchData.cabinClass}
@@ -484,7 +440,7 @@ const FlightSearchBar = ({ onSearch, className }) => {
               return (
                 <button
                   key={fare.id}
-                  disabled={fare.id !== "regular"} title={fare.id !== "regular" ? "Special fares are not available yet" : undefined} onClick={() => setSpecialFare(fare.id)}
+                  type="button" aria-pressed={specialFare === fare.id} onClick={() => setSpecialFare(fare.id)}
                   className={cn(
                     "relative p-4 rounded-xl border-2 transition-all duration-300 text-left group hover:shadow-md",
                     specialFare === fare.id

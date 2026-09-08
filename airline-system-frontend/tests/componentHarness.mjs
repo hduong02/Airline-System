@@ -53,6 +53,7 @@ export async function loadComponent(path, overrides = {}, exportName = 'default'
   });
   Object.assign(bindings.React, {
     useState: bindings.useState, useRef: bindings.useRef, useEffect: bindings.useEffect,
+    useId: () => `test-id-${cursor++}`,
   });
   const module = { exports: {} };
   const Component = new Function('bindings', 'module', 'exports', 'sessionStorage', 'exportName',

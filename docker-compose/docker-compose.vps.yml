@@ -1,0 +1,38 @@
+# Published Java images do not include curl. Check HTTP with Bash instead.
+services:
+  booking-service:
+    environment:
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  payment-service:
+    environment:
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  seat-service:
+    environment:
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  ancillary-service:
+    environment:
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  api-gateway:
+    environment:
+      # Preserve defaultZone casing for Eureka's case-sensitive service URL map.
+      SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka/"}}}}'
+  config-server:
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8888;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+  service-registry:
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8761;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '

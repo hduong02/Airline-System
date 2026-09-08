@@ -46,9 +46,13 @@ const ModernFlightCard = ({
   isBookmarked = false,
   className,
   viewMode = "list",
+  bookingDisabled = false,
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (bookingDisabled) setIsPricingModalOpen(false);
+  }, [bookingDisabled]);
 
 
 
@@ -427,7 +431,8 @@ const ModernFlightCard = ({
               <Button
                 variant="default"
                 size="lg"
-                onClick={() => setIsPricingModalOpen(true)}
+                disabled={bookingDisabled}
+                onClick={() => { if (!bookingDisabled) setIsPricingModalOpen(true); }}
                 className="gap-2 min-w-[140px]"
               >
                 <DollarSign className="h-5 w-5" />
@@ -825,7 +830,7 @@ const ModernFlightCard = ({
       </CardContent>
 
       {/* Pricing Modal */}
-      {isPricingModalOpen && (
+      {isPricingModalOpen && !bookingDisabled && (
         <FlightPricingModal
           isOpen={isPricingModalOpen}
           onClose={() => setIsPricingModalOpen(false)}

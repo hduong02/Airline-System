@@ -1,11 +1,7 @@
 import axios from 'axios';
 
-// const localHost="http://localhost:5000"
-// const vpsIP="http://194.164.148.89:5000"
-const deployed="https://codewithzosh.tech"
-
 const api = axios.create({
-  baseURL: deployed,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5173',
   headers: {
     'Content-Type': 'application/json',
   },

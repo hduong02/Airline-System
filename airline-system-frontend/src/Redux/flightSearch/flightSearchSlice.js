@@ -3,11 +3,18 @@ import { searchFlightsAvailability } from "./flightSearchThunk.js";
 
 const emptyPage = { content: [], number: 0, totalElements: 0, totalPages: 0, last: true };
 const initialState = { searchResults: emptyPage, loading: false, loadingMore: false, error: null,
-  lastSearchParams: null, activeRequestId: null };
+  lastSearchParams: null, activeRequestId: null, errorPage: null };
 const flightSearchSlice = createSlice({
   name: "flightSearch", initialState,
   reducers: {
     clearSearchResults: () => initialState,
+    invalidateSearchRequest: (state) => {
+      state.activeRequestId = null;
+      state.loading = false;
+      state.loadingMore = false;
+      state.error = null;
+      state.errorPage = null;
+    },
     setLastSearchParams: (state, action) => { state.lastSearchParams = action.payload; },
   },
   extraReducers: (builder) => builder
@@ -15,8 +22,8 @@ const flightSearchSlice = createSlice({
       state.activeRequestId = action.meta.requestId;
       state.loadingMore = (action.meta.arg.page || 0) > 0;
       state.loading = !state.loadingMore;
-      if (!state.loadingMore) state.searchResults = emptyPage;
       state.error = null;
+      state.errorPage = null;
     })
     .addCase(searchFlightsAvailability.fulfilled, (state, action) => {
       if (state.activeRequestId !== action.meta.requestId) return;
@@ -35,7 +42,8 @@ const flightSearchSlice = createSlice({
       state.loadingMore = false;
       state.activeRequestId = null;
       state.error = action.meta.aborted ? null : (action.payload || action.error.message || "Failed to search flights");
+      state.errorPage = action.meta.aborted ? null : (action.meta.arg.page || 0);
     }),
 });
-export const { clearSearchResults, setLastSearchParams } = flightSearchSlice.actions;
+export const { clearSearchResults, invalidateSearchRequest, setLastSearchParams } = flightSearchSlice.actions;
 export default flightSearchSlice.reducer;
