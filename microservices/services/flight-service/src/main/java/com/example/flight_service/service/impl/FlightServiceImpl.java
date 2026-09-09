@@ -4,8 +4,10 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.enums.FlightStatus;
 import com.example.flight_service.mapper.FlightMapper;
@@ -75,9 +77,13 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public FlightResponse updateFlight(Long id, FlightRequest request) throws Exception {
-        Flight existing = flightRepository.findById(id)
-                .orElseThrow(() -> new Exception("Flight not found with id: " + id));
+    public FlightResponse updateFlight(Long userId, Long id, FlightRequest request) throws Exception {
+        Flight existing = getOwnedFlight(userId, id);
+
+        if (request.getAirlineId() != null && !request.getAirlineId().equals(existing.getAirlineId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "A flight cannot be transferred to another airline");
+        }
 
         if (request.getFlightNumber() != null &&
                 flightRepository.existsByFlightNumberAndIdNot(request.getFlightNumber(), id)) {
@@ -91,9 +97,8 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public FlightResponse changeStatus(Long id, FlightStatus status) throws Exception {
-        Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new Exception("Flight not found with id: " + id));
+    public FlightResponse changeStatus(Long userId, Long id, FlightStatus status) throws Exception {
+        Flight flight = getOwnedFlight(userId, id);
         flight.setStatus(status);
         Flight updated = flightRepository.save(flight);
         return convertToFlightResponse(updated);
@@ -106,6 +111,18 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findByAirlineIdAndId(airlineResponse.getId(), id)
                 .orElseThrow(() -> new Exception("Flight not found with id: " + id));
         flightRepository.delete(flight);
+    }
+
+    private Flight getOwnedFlight(Long userId, Long id) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Flight not found with id: " + id));
+        AirlineResponse airline = airlineClient.getAirlineById(flight.getAirlineId());
+        if (userId == null || airline == null || !userId.equals(airline.getOwnerId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You do not own this flight's airline");
+        }
+        return flight;
     }
 
     private FlightResponse convertToFlightResponse(Flight flight) {

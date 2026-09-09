@@ -1,12 +1,15 @@
 package com.example.user_service.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.enums.UserRole;
 import com.example.payload.dto.UserDto;
@@ -39,11 +42,11 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse signup(UserDto request) throws Exception {
         User existingUser = userRepository.findByEmail(request.getEmail());
         if (existingUser != null) {
-            throw new Exception("Email already registered");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
 
         if (request.getRole() == UserRole.ROLE_SYSTEM_ADMIN) {
-            throw new Exception("Cannot register as SYSTEM_ADMIN");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot register as SYSTEM_ADMIN");
         }
 
         User createdUser = new User();
@@ -99,16 +102,19 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Authentication authenticate(String email, String password) throws Exception {
-        UserDetails userDetails = customUserDetailsService
-                .loadUserByUsername(email);
+        UserDetails userDetails;
+        try {
+            userDetails = customUserDetailsService.loadUserByUsername(email);
+        } catch (UsernameNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
         if (userDetails == null) {
-            throw new Exception("User not found with email: " + email);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-            throw new Exception("Invalid password");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
         return new UsernamePasswordAuthenticationToken(
                 email, null, userDetails.getAuthorities());
     }
 }
-    

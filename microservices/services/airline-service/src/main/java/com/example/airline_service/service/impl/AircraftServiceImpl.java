@@ -1,12 +1,13 @@
 package com.example.airline_service.service.impl;
 
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -31,18 +32,18 @@ public class AircraftServiceImpl implements AircraftService {
     public AircraftResponse createAircraft(AircraftRequest request, Long ownerId)
             throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Airline not found for owner: " + ownerId));
 
         Aircraft aircraft = AircraftMapper.toEntity(request, airline);
 
         if (aircraftRepository.existsByCode(aircraft.getCode())) {
-            throw new Exception(
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Aircraft with code " + aircraft.getCode() + " already exists");
         }
 
         if (aircraft.getSeatingCapacity() != null && aircraft.getSeatingCapacity() <= 0) {
-            throw new Exception("Seating capacity must be positive");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seating capacity must be positive");
         }
         return AircraftMapper.toResponse(aircraftRepository.save(aircraft));
     }
@@ -51,14 +52,15 @@ public class AircraftServiceImpl implements AircraftService {
     @Cacheable(cacheNames = "aircrafts", key = "#id")
     public AircraftResponse getAircraftById(Long id) throws Exception {
         Aircraft aircraft = aircraftRepository.findById(id)
-                .orElseThrow(() -> new Exception("Aircraft not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Aircraft not found with id: " + id));
         return AircraftMapper.toResponse(aircraft);
     }
 
     @Override
     public List<AircraftResponse> listAllAircraftsByOwner(Long ownerId) {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Airline not found for owner: " + ownerId));
         return aircraftRepository.findByAirline(airline)
                 .stream()
@@ -71,12 +73,12 @@ public class AircraftServiceImpl implements AircraftService {
     public AircraftResponse updateAircraft(Long id, AircraftRequest request, Long ownerId)
             throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Airline not found for owner: " + ownerId));
 
         Aircraft aircraft = aircraftRepository.findByIdAndAirlineId(id, airline.getId());
         if (aircraft == null) {
-            throw new Exception("Aircraft not found with id: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aircraft not found with id: " + id);
         }
 
         String oldCode = aircraft.getCode();
@@ -84,7 +86,8 @@ public class AircraftServiceImpl implements AircraftService {
         if (request.getCode() != null
                 && !oldCode.equals(request.getCode())
                 && aircraftRepository.existsByCode(request.getCode())) {
-            throw new Exception("Aircraft with code " + request.getCode() + " already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Aircraft with code " + request.getCode() + " already exists");
         }
 
         AircraftMapper.updateEntity(aircraft, request);
@@ -96,12 +99,12 @@ public class AircraftServiceImpl implements AircraftService {
     @CacheEvict(cacheNames = "aircrafts", key = "#id")
     public void deleteAircraft(Long id, Long ownerId) throws Exception {
         Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Airline not found for owner: " + ownerId));
 
         Aircraft aircraft = aircraftRepository.findByIdAndAirlineId(id, airline.getId());
         if (aircraft == null) {
-            throw new Exception("Aircraft not found with id: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aircraft not found with id: " + id);
         }
 
         aircraftRepository.delete(aircraft);

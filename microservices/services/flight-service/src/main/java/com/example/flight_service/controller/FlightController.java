@@ -52,15 +52,17 @@ public class FlightController {
     @PutMapping("/{id}")
     public ResponseEntity<FlightResponse> updateFlight(
             @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId,
             @RequestBody FlightRequest request) throws Exception {
-        return ResponseEntity.ok(flightService.updateFlight(id, request));
+        return ResponseEntity.ok(flightService.updateFlight(userId, id, request));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<FlightResponse> changeStatus(
             @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId,
             @RequestParam FlightStatus status) throws Exception {
-        return ResponseEntity.ok(flightService.changeStatus(id, status));
+        return ResponseEntity.ok(flightService.changeStatus(userId, id, status));
     }
 
     @DeleteMapping("/{id}")

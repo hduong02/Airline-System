@@ -1,5 +1,7 @@
 package com.example.api_gateway.config;
 
+import java.util.Arrays;
+
 import org.springframework.cloud.gateway.server.mvc.filter.LoadBalancerFilterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
@@ -53,6 +55,9 @@ public class RouteConfig {
     public RouterFunction<ServerResponse> adminAirlineServiceRoutes() {
         return GatewayRouterFunctions.route("admin-airline-service-routes")
                 .route(RequestPredicates.GET("/api/airlines"), HandlerFunctions.http())
+                .route(RequestPredicates.POST("/api/airlines/{id}/approve"), HandlerFunctions.http())
+                .route(RequestPredicates.POST("/api/airlines/{id}/suspend"), HandlerFunctions.http())
+                .route(RequestPredicates.POST("/api/airlines/{id}/ban"), HandlerFunctions.http())
                 .filter(LoadBalancerFilterFunctions.lb("airline-service"))
                 .before(this::jwtAuthFilter)
                 .before(request -> requireRole(request, UserRole.ROLE_SYSTEM_ADMIN.toString()))
@@ -210,7 +215,7 @@ public class RouteConfig {
 
     private ServerRequest requireRole(ServerRequest request, String role) {
         String roles = request.headers().firstHeader("X-User-Roles");
-        if (roles == null || !roles.contains(role)) {
+        if (roles == null || Arrays.stream(roles.split(",")).map(String::trim).noneMatch(role::equals)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Access denied. Required role: " + role);
         }

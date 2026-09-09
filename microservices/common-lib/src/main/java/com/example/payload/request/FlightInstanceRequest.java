@@ -19,6 +19,7 @@ public class FlightInstanceRequest {
 
     private Long airlineId;
 
+    @NotNull(message = "Schedule ID is required")
     private Long scheduleId;
 
     private Long departureAirportId;

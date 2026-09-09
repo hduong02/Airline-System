@@ -18,9 +18,9 @@ public interface FlightService {
                                             Long arrivalAirportId,
                                             Pageable pageable);
 
-    FlightResponse updateFlight(Long id, FlightRequest request) throws Exception;
+    FlightResponse updateFlight(Long userId, Long id, FlightRequest request) throws Exception;
 
-    FlightResponse changeStatus(Long id, FlightStatus status) throws Exception;
+    FlightResponse changeStatus(Long userId, Long id, FlightStatus status) throws Exception;
 
     void deleteFlight(Long userId, Long id) throws Exception;
 }

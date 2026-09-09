@@ -15,6 +15,7 @@ import {
 const initialState = {
   // Data
   aircrafts: [],
+  fleetLoaded: false,
   listRequestId: null,
   currentAircraft: null,
   paginatedAircrafts: {
@@ -60,6 +61,8 @@ const aircraftSlice = createSlice({
   reducers: {
     clearAircraftState: (state) => {
       state.aircrafts = [];
+      state.fleetLoaded = false;
+      state.listRequestId = null;
       state.currentAircraft = null;
       state.paginatedAircrafts = {
         content: [],
@@ -142,6 +145,7 @@ const aircraftSlice = createSlice({
       
       // List All Aircrafts
       .addCase(listAllAircrafts.pending, (state, action) => {
+        state.fleetLoaded = false;
         state.listRequestId = action.meta.requestId;
         state.loading = true;
         state.error = null;
@@ -150,6 +154,8 @@ const aircraftSlice = createSlice({
         if (state.listRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.listRequestId = null;
+        // Only the complete owner-scoped list can provide fleet-wide metrics.
+        state.fleetLoaded = Array.isArray(action.payload);
         state.aircrafts = Array.isArray(action.payload) ? action.payload : action.payload.content;
         state.paginatedAircrafts = Array.isArray(action.payload)
           ? aircraftPage(action.payload, action.meta.arg) : action.payload;

@@ -40,7 +40,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     @Override
     public FlightScheduleResponse createFlightSchedule(Long userId,
                 FlightScheduleRequest request) throws Exception {
-        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
+        airlineClient.getAirlineByOwner(userId);
         
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new Exception(
@@ -73,7 +73,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
                 flightInstanceRequest.setArrivalDateTime(
                         LocalDateTime.of(date, schedule.getArrivalTime()));
 
-                flightInstanceService.createFlightInstance(airlineResponse.getId(),
+                flightInstanceService.createFlightInstance(userId,
                         flightInstanceRequest);
             }
         }

@@ -6,13 +6,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useNavigate } from 'react-router-dom';
 import AircraftTable from '@/components/aircraft/AircraftTable';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Plane } from 'lucide-react';
 
 const AircraftListPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const aircraftState = useSelector(state => state.aircraft);
+  const { aircrafts, fleetLoaded } = aircraftState;
+  const metrics = aircrafts.reduce((totals, aircraft) => ({
+    total: totals.total + 1,
+    active: totals.active + (aircraft.status === 'ACTIVE' ? 1 : 0),
+    maintenance: totals.maintenance + (aircraft.status === 'MAINTENANCE' ? 1 : 0),
+    seats: totals.seats + Number(aircraft.seatingCapacity ?? aircraft.totalSeats ?? 0),
+  }), { total: 0, active: 0, maintenance: 0, seats: 0 });
+  const formatMetric = value => fleetLoaded ? value.toLocaleString('en-US') : '—';
   const [deletingAircraft, setDeletingAircraft] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const deletionInFlight = React.useRef(false);
@@ -76,7 +84,7 @@ const AircraftListPage = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">24</p>
+              <p className="text-2xl font-bold text-blue-600">{formatMetric(metrics.total)}</p>
               <p className="text-sm text-gray-600">Total Aircraft</p>
             </div>
           </CardContent>
@@ -85,7 +93,7 @@ const AircraftListPage = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">18</p>
+              <p className="text-2xl font-bold text-green-600">{formatMetric(metrics.active)}</p>
               <p className="text-sm text-gray-600">Active</p>
             </div>
           </CardContent>
@@ -94,7 +102,7 @@ const AircraftListPage = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-600">4</p>
+              <p className="text-2xl font-bold text-yellow-600">{formatMetric(metrics.maintenance)}</p>
               <p className="text-sm text-gray-600">Maintenance</p>
             </div>
           </CardContent>
@@ -103,7 +111,7 @@ const AircraftListPage = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">4,280</p>
+              <p className="text-2xl font-bold text-purple-600">{formatMetric(metrics.seats)}</p>
               <p className="text-sm text-gray-600">Total Seats</p>
             </div>
           </CardContent>

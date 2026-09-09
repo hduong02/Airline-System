@@ -13,6 +13,26 @@ import { getCabinClassesByAircraft } from "@/Redux/cabinClass/cabinClassThunk";
 import { buildBookingPayload } from "@/services/Booking/bookingService";
 import { getPassengerCount, isFareForSelection, selectInitialCabin } from "@/utils/bookingCheckout";
 
+const formatFlightTime = (dateTime) => {
+  const date = new Date(dateTime);
+  if (!dateTime || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+const formatFlightDate = (dateTime) => {
+  const date = new Date(dateTime);
+  if (!dateTime || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
   const [selectedCabinId, setSelectedCabinId] = useState("");
   const [selectedFare, setSelectedFare] = useState(null);
@@ -23,6 +43,7 @@ const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
   const [searchParams] = useSearchParams();
   const passengerCount = getPassengerCount(searchParams.get("numberOfTravellers"));
   const requestedCabin = searchParams.get("cabinClass") || flight?.cabinClass;
+  const stops = flight?.totalStops ?? flight?.stops ?? 0;
   const contextKey = `${flight?.id}:${flight?.flightId}:${flight?.aircraftId}`;
   const cabinClasses = cabinResult?.key === contextKey ? cabinResult.cabins : [];
   const selectedCabinClass = cabinClasses.find((cabin) => String(cabin.id) === selectedCabinId);
@@ -116,32 +137,32 @@ const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
             <div className="flex items-center gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {flight?.departureAirportCode || "DEL"}
+                  {flight?.departureAirport?.iataCode || "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(flight?.departureTime).toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatFlightTime(flight?.departureDateTime)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {formatFlightDate(flight?.departureDateTime)}
                 </div>
               </div>
               <div className="flex flex-col items-center">
                 <Plane className="h-5 w-5 text-blue-600 mb-1" />
                 <div className="text-xs text-muted-foreground">
-                  {flight?.totalStops === 0
+                  {stops === 0
                     ? "Non-stop"
-                    : `${flight?.totalStops} stop(s)`}
+                    : `${stops} stop(s)`}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {flight?.arrivalAirportCode || "SGN"}
+                  {flight?.arrivalAirport?.iataCode || "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(flight?.arrivalTime).toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatFlightTime(flight?.arrivalDateTime)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {formatFlightDate(flight?.arrivalDateTime)}
                 </div>
               </div>
             </div>
