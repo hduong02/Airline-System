@@ -129,6 +129,22 @@ public class StripeService {
         }
     }
 
+    public CheckoutState fetchCheckoutState(String sessionId) throws Exception {
+        if (!isConfigured())
+            throw new Exception("stripe not configured. please setup api key");
+        Session session = Session.retrieve(sessionId);
+        if ("paid".equals(session.getPaymentStatus())) {
+            return new CheckoutState(CheckoutOutcome.PAID, session.getPaymentIntent());
+        }
+        if ("expired".equals(session.getStatus())) {
+            return new CheckoutState(CheckoutOutcome.EXPIRED, null);
+        }
+        if ("open".equals(session.getStatus()) || "complete".equals(session.getStatus())) {
+            return new CheckoutState(CheckoutOutcome.PROCESSING, null);
+        }
+        throw new IllegalStateException("Unknown Stripe Checkout status: " + session.getStatus());
+    }
+
     public CheckoutState reconcileCheckoutSession(String sessionId) throws StripeException {
         Session session = Session.retrieve(sessionId);
         if ("paid".equals(session.getPaymentStatus())) {

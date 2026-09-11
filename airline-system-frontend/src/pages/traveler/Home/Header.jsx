@@ -3,7 +3,6 @@ import { Plane, Menu, X, User, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux/user/userThunks";
 import {
@@ -63,7 +62,7 @@ const Header = () => {
                 <Plane className="h-6 w-6 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold text-foreground">
-                VN Airline
+                AirlinePro
               </span>
             </Link>
           </div>
@@ -88,7 +87,6 @@ const Header = () => {
 
           {/* Desktop Login Button or User Profile */}
           <div className="hidden md:flex items-center space-x-4">
-            <ThemeToggle />
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -187,9 +185,6 @@ const Header = () => {
               {/* Mobile Login/Signup or User Profile */}
               <div className="pt-4 pb-3 border-t border-border">
                 <div className="flex flex-col space-y-2">
-                  <div className="mb-3">
-                    <ThemeToggle className="w-full" />
-                  </div>
                   {isAuthenticated && user ? (
                     <>
                       <div className="flex items-center space-x-3 px-3 py-2">

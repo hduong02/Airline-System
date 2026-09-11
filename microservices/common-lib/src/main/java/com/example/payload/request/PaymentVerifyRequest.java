@@ -17,4 +17,7 @@ public class PaymentVerifyRequest {
     // Stripe specific fields
     private String stripePaymentIntentId;
 
+    // Verify the authenticated user's persisted Checkout Session for this booking.
+    private Long bookingId;
+
 }

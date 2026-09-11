@@ -1,9 +1,11 @@
-export function getPaymentVerificationRequest(params) {
+export function getPaymentVerificationRequest(params, bookingId) {
   const razorpayPaymentId = params.get('razorpay_payment_id') || params.get('payment_id');
   const stripePaymentIntentId = params.get('stripe_payment_intent_id') || params.get('payment_intent');
   if (stripePaymentIntentId) return { stripePaymentIntentId };
   if (razorpayPaymentId) return { razorpayPaymentId };
-  // A Stripe Checkout Session ID is not a PaymentIntent ID. Its webhook updates the booking.
+  // The backend retrieves the session saved for this booking and checks its owner.
+  // Never send a Checkout Session ID as a PaymentIntent ID.
+  if (bookingId) return { bookingId };
   return null;
 }
 

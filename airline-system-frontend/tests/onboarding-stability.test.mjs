@@ -3,6 +3,19 @@ import { test } from 'node:test';
 import * as Yup from 'yup';
 import { loadComponent, findAll } from './componentHarness.mjs';
 
+test('wizard has no continuously animated or filtered background layers', async () => {
+  const wizard = await loadComponent('pages/Onboarding/AirlineOnboardingWizard.jsx', {
+    readOnboardingProgress: () => ({ currentStep: 1, formData: {} }),
+  });
+  const tree = wizard.render();
+  const expensiveLayers = findAll(tree, node => {
+    const classes = node.props?.className || '';
+    return /(?:^|\s)(?:animate-pulse|blur-\S+|backdrop-blur-\S+)(?:\s|$)/.test(classes);
+  });
+  assert.equal(expensiveLayers.length, 0,
+    'the wizard should remain idle without animated blur layers behind the form');
+});
+
 test('password strength updates retain input component identity', async () => {
   const owner = await loadComponent('pages/Onboarding/steps/OwnerDetailsStep.jsx', {
     Yup, useDispatch: () => () => {}, useSelector: () => ({ user: null, isAuthenticated: false }),

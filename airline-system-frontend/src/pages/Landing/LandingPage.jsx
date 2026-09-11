@@ -20,7 +20,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import FloatingElements from "@/components/FloatingElements"
-import { ThemeToggle } from "@/components/theme-toggle"
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -121,7 +120,6 @@ const LandingPage = () => {
             </nav>
             <div className="flex items-center space-x-4">
               <div className="hidden md:flex items-center space-x-4">
-                <ThemeToggle />
                 <Button variant="ghost" onClick={() => navigate('/login')}>
                   Sign In
                 </Button>
@@ -149,9 +147,6 @@ const LandingPage = () => {
                 <a href="#testimonials" className="block text-muted-foreground hover:text-primary transition-colors py-2">Reviews</a>
                 <a href="#pricing" className="block text-muted-foreground hover:text-primary transition-colors py-2">Pricing</a>
                 <div className="pt-4 border-t border-border space-y-2">
-                  <div className="mb-3">
-                    <ThemeToggle className="w-full" />
-                  </div>
                   <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/login')}>
                     Sign In
                   </Button>

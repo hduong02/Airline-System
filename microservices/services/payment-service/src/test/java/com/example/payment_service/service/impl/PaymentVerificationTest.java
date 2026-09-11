@@ -7,6 +7,9 @@ import com.example.payment_service.model.Payment;
 import com.example.payment_service.repository.PaymentRepository;
 import com.example.payment_service.service.PaymentInitiationService;
 import com.example.payment_service.service.gateway.StripeService;
+import com.example.payment_service.service.gateway.StripeService.CheckoutOutcome;
+import com.example.payment_service.service.gateway.StripeService.CheckoutState;
+import org.springframework.web.server.ResponseStatusException;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,6 +26,73 @@ class PaymentVerificationTest {
     private final PaymentEventProducer events = mock(PaymentEventProducer.class);
     private final PaymentServiceImpl service = new PaymentServiceImpl(repository, stripe, events,
             mock(PaymentInitiationService.class));
+
+    @Test
+    void paidCheckoutReturnConfirmsPaymentAndPublishesOnlyOnce() throws Exception {
+        Payment payment = checkoutPayment();
+        when(repository.save(payment)).thenReturn(payment);
+        when(stripe.fetchCheckoutState("cs_saved")).thenReturn(new CheckoutState(CheckoutOutcome.PAID, "pi_1"));
+
+        assertEquals(PaymentStatus.SUCCESS, service.verifyCheckoutPayment(1L, 2L).getStatus());
+        assertEquals(PaymentStatus.SUCCESS, service.verifyCheckoutPayment(1L, 2L).getStatus());
+        assertEquals("pi_1", payment.getProviderPaymentId());
+        assertNotNull(payment.getPaidAt());
+        verify(events, times(1)).sendPaymentCompleted(payment);
+        verify(stripe, times(1)).fetchCheckoutState("cs_saved");
+        verify(stripe, never()).reconcileCheckoutSession(any());
+        verify(events, never()).sendPaymentFailed(any());
+    }
+
+    @Test
+    void unpaidCheckoutIsNotExpiredAndCanSucceedOnNextPoll() throws Exception {
+        Payment payment = checkoutPayment();
+        when(repository.save(payment)).thenReturn(payment);
+        when(stripe.fetchCheckoutState("cs_saved")).thenReturn(
+                new CheckoutState(CheckoutOutcome.PROCESSING, null),
+                new CheckoutState(CheckoutOutcome.PAID, "pi_1"));
+
+        assertEquals(PaymentStatus.PENDING, service.verifyCheckoutPayment(1L, 2L).getStatus());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(events);
+        assertEquals(PaymentStatus.SUCCESS, service.verifyCheckoutPayment(1L, 2L).getStatus());
+        verify(stripe, never()).reconcileCheckoutSession(any());
+    }
+
+    @Test
+    void checkoutVerificationRejectsAnotherUserBeforeContactingStripe() {
+        checkoutPayment();
+        var error = assertThrows(ResponseStatusException.class, () -> service.verifyCheckoutPayment(1L, 3L));
+        assertEquals(403, error.getStatusCode().value());
+        verifyNoInteractions(stripe, events);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void stripeFailureDoesNotConfirmBooking() throws Exception {
+        Payment payment = checkoutPayment();
+        when(stripe.fetchCheckoutState("cs_saved")).thenThrow(new Exception("Stripe unavailable"));
+        assertThrows(Exception.class, () -> service.verifyCheckoutPayment(1L, 2L));
+        assertEquals(PaymentStatus.PENDING, payment.getStatus());
+        verifyNoInteractions(events);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void paidCheckoutWithoutIntentDoesNotConfirmBooking() throws Exception {
+        Payment payment = checkoutPayment();
+        when(stripe.fetchCheckoutState("cs_saved")).thenReturn(new CheckoutState(CheckoutOutcome.PAID, null));
+        assertThrows(IllegalStateException.class, () -> service.verifyCheckoutPayment(1L, 2L));
+        assertEquals(PaymentStatus.PENDING, payment.getStatus());
+        verifyNoInteractions(events);
+        verify(repository, never()).save(any());
+    }
+
+    private Payment checkoutPayment() {
+        Payment payment = payment();
+        payment.setCheckoutSessionId("cs_saved");
+        when(repository.findByBookingIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        return payment;
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"requires_payment_method", "requires_confirmation", "requires_action",

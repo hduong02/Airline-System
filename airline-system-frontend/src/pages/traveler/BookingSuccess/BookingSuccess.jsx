@@ -54,10 +54,24 @@ const BookingSuccess = () => {
     let request;
     let verifiedPayment;
     let verificationError;
+    const payload = getPaymentVerificationRequest(new URLSearchParams(callbackQuery), bookingId);
     const message = (err) => typeof err === 'string' ? err : err?.message || 'Unable to load payment result.';
     setResult({ bookingId, booking: null, loading: true, error: null });
 
     const fetchBooking = async (attempt = 0) => {
+      if (payload && (attempt === 0 || verifiedPayment?.status === 'PENDING')) {
+        try {
+          request = dispatch(verifyPayment(payload));
+          verifiedPayment = await request.unwrap();
+          if (String(verifiedPayment.bookingId) !== String(bookingId)) {
+            verifiedPayment = null;
+            throw new Error('The verified payment belongs to a different booking.');
+          }
+        } catch (err) {
+          verificationError = message(err);
+        }
+      }
+      if (!active) return;
       try {
         request = dispatch(getBookingById(bookingId));
         const current = await request.unwrap();
@@ -71,23 +85,7 @@ const BookingSuccess = () => {
         if (active) setResult({ bookingId, booking: null, loading: false, error: message(err) });
       }
     };
-    const load = async () => {
-      const payload = getPaymentVerificationRequest(new URLSearchParams(callbackQuery));
-      if (payload) {
-        try {
-          request = dispatch(verifyPayment(payload));
-          verifiedPayment = await request.unwrap();
-          if (String(verifiedPayment.bookingId) !== String(bookingId)) {
-            verifiedPayment = null;
-            throw new Error('The verified payment belongs to a different booking.');
-          }
-        } catch (err) {
-          verificationError = message(err);
-        }
-      }
-      if (active) await fetchBooking();
-    };
-    load();
+    fetchBooking();
     return () => { active = false; clearTimeout(timer); request?.abort?.(); };
   }, [bookingId, callbackQuery, dispatch, refresh]);
 

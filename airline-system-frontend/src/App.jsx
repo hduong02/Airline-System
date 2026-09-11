@@ -1,40 +1,39 @@
 import "./App.css";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
 } from "react-router-dom";
-import { ThemeProvider } from "./components/theme-provider.jsx";
 import { Toaster } from "./components/ui/sonner.jsx";
-import LandingPage from "./pages/Landing/LandingPage.jsx";
 import Header from "./pages/traveler/Home/Header.jsx";
-import HomePage from "./pages/traveler/Home/HomePage.jsx";
-import SearchResults from "./pages/traveler/FlightList/SearchResults.jsx";
-
-import PaymentPage from "./pages/traveler/Payment/PaymentPage.jsx";
-import BookingHistory from "./pages/traveler/BookingHistory/BookingHistory.jsx";
-import BookingSuccess from "./pages/traveler/BookingSuccess/BookingSuccess.jsx";
-import ETicket from "./pages/traveler/Ticket/ETicket.jsx";
-import Ticket from "./pages/traveler/Ticket/Ticket.jsx";
-import UserProfile from "./pages/traveler/Profile/UserProfile.jsx";
-import AirlineDashboard from "./pages/airline/Dashboard/AirlineDashboard.jsx";
-import SuperAdminDashboard from "./pages/super-admin/Dashboard/SuperAdminDashboard.jsx";
-
-
-import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
-import ResetPassword from "./pages/auth/ResetPassword.jsx";
 import { SessionInitializer, RequireSession, AuthProtected, RoleRedirect, OnboardingGuard } from "./components/SessionRoutes.jsx";
-import Auth from "./pages/auth/Auth.jsx";
-import BookingReview from "./pages/traveler/BookingReview/BookingReview.jsx";
-import AirlineOnboardingWizard from "./pages/Onboarding/AirlineOnboardingWizard";
+
+// Load route content on demand so registration does not load dashboards or PDFs.
+const LandingPage = lazy(() => import("./pages/Landing/LandingPage.jsx"));
+const HomePage = lazy(() => import("./pages/traveler/Home/HomePage.jsx"));
+const SearchResults = lazy(() => import("./pages/traveler/FlightList/SearchResults.jsx"));
+const PaymentPage = lazy(() => import("./pages/traveler/Payment/PaymentPage.jsx"));
+const BookingHistory = lazy(() => import("./pages/traveler/BookingHistory/BookingHistory.jsx"));
+const BookingSuccess = lazy(() => import("./pages/traveler/BookingSuccess/BookingSuccess.jsx"));
+const ETicket = lazy(() => import("./pages/traveler/Ticket/ETicket.jsx"));
+const Ticket = lazy(() => import("./pages/traveler/Ticket/Ticket.jsx"));
+const UserProfile = lazy(() => import("./pages/traveler/Profile/UserProfile.jsx"));
+const AirlineDashboard = lazy(() => import("./pages/airline/Dashboard/AirlineDashboard.jsx"));
+const SuperAdminDashboard = lazy(() => import("./pages/super-admin/Dashboard/SuperAdminDashboard.jsx"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword.jsx"));
+const Auth = lazy(() => import("./pages/auth/Auth.jsx"));
+const BookingReview = lazy(() => import("./pages/traveler/BookingReview/BookingReview.jsx"));
+const AirlineOnboardingWizard = lazy(() => import("./pages/Onboarding/AirlineOnboardingWizard.jsx"));
 
 function App() {
   return (
-    <ThemeProvider>
       <Router>
         <div className="min-h-screen bg-background transition-colors">
           <Toaster />
           <SessionInitializer />
+          <Suspense fallback={<div role="status" className="p-8 text-center">Loading page…</div>}>
           <Routes>
             {/* Authentication Routes - Protected for unauthenticated users only */}
             <Route
@@ -204,9 +203,9 @@ function App() {
               <Route path="/super-admin/*" element={<SuperAdminDashboard />} />
             </Route>
           </Routes>
+          </Suspense>
         </div>
       </Router>
-    </ThemeProvider>
   );
 }
 

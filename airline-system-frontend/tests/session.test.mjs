@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { createServer } from 'vite';
+import { lazy } from 'react';
 import { loadComponent, findAll, deferred, settle } from './componentHarness.mjs';
 import { readOnboardingProgress, sanitizeOnboardingData } from '../src/utils/onboardingProgress.js';
 import { getLoginDestination, homeForRole } from '../src/utils/authNavigation.js';
@@ -214,7 +215,7 @@ test('login preserves private callback destinations and rejects external or forb
 });
 
 test('App wraps every private page and both dashboards in the intended guards', async () => {
-  const app = await loadComponent('App.jsx');
+  const app = await loadComponent('App.jsx', { lazy });
   const routes = findAll(app.render(), (node) => node.type === 'Route');
   const privateGroup = routes.find((route) => route.props.element?.type === 'RequireSession' && !route.props.element.props.roles);
   assert.ok(privateGroup);

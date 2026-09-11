@@ -326,20 +326,25 @@ public class BookingServiceImpl implements BookingService {
                 paymentClient.getPaymentsByBookingIds(bookingIds)).orElseGet(Map::of);
         Map<Long, FareResponse> fares = fareIds.isEmpty() ? Map.of() : Optional.ofNullable(
                 fareIntegrationService.getFaresByIds(fareIds)).orElseGet(Map::of);
+        Map<Long, FlightResponse> flights = new HashMap<>();
+        Map<Long, FlightInstanceResponse> instances = new HashMap<>();
         return bookings.stream()
                 .map(booking -> convertToBookingResponse(booking,
                         payments.get(booking.getId()), booking.getFareId() == null
-                                ? null : fares.get(booking.getFareId())))
+                                ? null : fares.get(booking.getFareId()),
+                        booking.getFlightId() == null ? null : flights.computeIfAbsent(
+                                booking.getFlightId(), flightClient::getFlightById),
+                        booking.getFlightInstanceId() == null ? null : instances.computeIfAbsent(
+                                booking.getFlightInstanceId(), flightClient::getFlightInstanceById)))
                 .toList();
     }
 
     private BookingResponse convertToBookingResponse(Booking booking,
-            PaymentDto paymentDto, FareResponse fareResponse) {
+            PaymentDto paymentDto, FareResponse fareResponse,
+            FlightResponse flightResponse, FlightInstanceResponse flightInstanceResponse) {
         List<FlightCabinAncillaryResponse> ancillaryResponses = new ArrayList<>();
         List<FlightMealResponse> mealResponses = new ArrayList<>();
-        FlightResponse flightResponse = new FlightResponse();
         List<SeatInstanceResponse> seatInstanceResponses = new ArrayList<>();
-        FlightInstanceResponse flightInstanceResponse = new FlightInstanceResponse();
 
         return BookingMapper.toResponse(booking,
                 paymentDto,

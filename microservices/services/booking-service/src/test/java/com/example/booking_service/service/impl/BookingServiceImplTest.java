@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -45,6 +46,8 @@ import com.example.payload.response.FlightResponse;
 import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.SeatInstanceResponse;
 import com.example.payload.response.BookingResponse;
+import com.example.payload.response.AirportResponse;
+import com.example.payload.response.CityResponse;
 
 class BookingServiceImplTest {
 
@@ -220,6 +223,36 @@ class BookingServiceImplTest {
     }
 
     @Test
+    void getBookingByIdIncludesFlightDetailsUsedByTicket() throws Exception {
+        Booking booking = Booking.builder().id(99L).userId(1L)
+                .flightId(10L).flightInstanceId(20L).build();
+        when(bookingRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(booking));
+        AirportResponse departure = AirportResponse.builder().name("Noi Bai")
+                .detailedName("Noi Bai (HAN)").iataCode("HAN")
+                .city(CityResponse.builder().name("Hanoi").build()).build();
+        AirportResponse arrival = AirportResponse.builder().name("Tan Son Nhat")
+                .detailedName("Tan Son Nhat (SGN)").iataCode("SGN")
+                .city(CityResponse.builder().name("Ho Chi Minh City").build()).build();
+        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder()
+                .id(10L).flightNumber("VN123").departureAirport(departure).arrivalAirport(arrival).build());
+        LocalDateTime departureTime = LocalDateTime.of(2026, 10, 20, 9, 30);
+        LocalDateTime arrivalTime = departureTime.plusHours(2);
+        when(flightClient.getFlightInstanceById(20L)).thenReturn(FlightInstanceResponse.builder()
+                .id(20L).flightId(10L).departureDateTime(departureTime).arrivalDateTime(arrivalTime)
+                .formattedDuration("2h 0m").build());
+
+        BookingResponse response = bookingService.getBookingById(99L, 1L);
+
+        assertEquals("VN123", response.getFlightNumber());
+        assertEquals("Hanoi - Ho Chi Minh City", response.getFlightName());
+        assertEquals("Noi Bai (HAN)", response.getDepartureAirport());
+        assertEquals("Tan Son Nhat", response.getArrivalAirport());
+        assertEquals(departureTime, response.getDepartureTime());
+        assertEquals(arrivalTime, response.getArrivalTime());
+        assertEquals("2h 0m", response.getFlightDuration());
+    }
+
+    @Test
     void getBookingsByUser_batchesFinancialLookups() {
         Booking first = Booking.builder().id(99L).fareId(30L).build();
         Booking second = Booking.builder().id(100L).fareId(30L).build();
@@ -239,6 +272,31 @@ class BookingServiceImplTest {
         assertEquals(null, responses.get(1).getTotalAmount());
         verify(paymentClient).getPaymentsByBookingIds(List.of(99L, 100L));
         verify(fareIntegrationService).getFaresByIds(List.of(30L));
+    }
+
+    @Test
+    void bookingHistoryKeepsInstanceTimesSeparateAndReusesSharedFlightLookup() {
+        Booking first = Booking.builder().id(99L).flightId(10L).flightInstanceId(20L).build();
+        Booking second = Booking.builder().id(100L).flightId(10L).flightInstanceId(21L).build();
+        Booking third = Booking.builder().id(101L).flightId(10L).flightInstanceId(20L).build();
+        when(bookingRepository.findByUserId(1L)).thenReturn(List.of(first, second, third));
+        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder().flightNumber("VN123").build());
+        LocalDateTime firstDeparture = LocalDateTime.of(2026, 10, 20, 9, 30);
+        LocalDateTime secondDeparture = firstDeparture.plusDays(1);
+        when(flightClient.getFlightInstanceById(20L)).thenReturn(FlightInstanceResponse.builder()
+                .departureDateTime(firstDeparture).build());
+        when(flightClient.getFlightInstanceById(21L)).thenReturn(FlightInstanceResponse.builder()
+                .departureDateTime(secondDeparture).build());
+
+        List<BookingResponse> responses = bookingService.getBookingsByUser(1L);
+
+        assertEquals("VN123", responses.get(0).getFlightNumber());
+        assertEquals(firstDeparture, responses.get(0).getDepartureTime());
+        assertEquals(secondDeparture, responses.get(1).getDepartureTime());
+        assertEquals(firstDeparture, responses.get(2).getDepartureTime());
+        verify(flightClient).getFlightById(10L);
+        verify(flightClient).getFlightInstanceById(20L);
+        verify(flightClient).getFlightInstanceById(21L);
     }
 
     @Test

@@ -10,6 +10,29 @@ const textOf = (node) => {
   return node == null ? '' : String(node);
 };
 const fixture = (status, paymentStatus) => ({ id: 7, status, paymentStatus, bookingReference: 'REAL-7' });
+for (const query of ['', 'session_id=cs_real']) {
+  test(`paid Checkout return verifies the stored session before confirming (${query || 'no query'})`, async () => {
+    let paid = false;
+    const calls = [];
+    const component = await loadComponent('pages/traveler/BookingSuccess/BookingSuccess.jsx', {
+      useParams: () => ({ bookingId: '7' }), useSearchParams: () => [new URLSearchParams(query)],
+      useNavigate: () => () => {}, useDispatch: () => (action) => {
+        calls.push(action);
+        return { unwrap: async () => {
+          if (action.type === 'verify') { paid = true; return { bookingId: 7, status: 'SUCCESS' }; }
+          return paid ? fixture('CONFIRMED', 'SUCCESS') : fixture('PENDING', 'PENDING');
+        } };
+      },
+      getBookingById: (id) => ({ type: 'booking', id }), verifyPayment: (payload) => ({ type: 'verify', payload }),
+      getPaymentVerificationRequest, getPaymentResult,
+    });
+    try {
+      component.render(); component.flushEffects(); await settle();
+      assert.deepEqual(calls[0], { type: 'verify', payload: { bookingId: '7' } });
+      assert.ok(textOf(component.render()).includes('Booking Confirmed!'));
+    } finally { component.unmount(); }
+  });
+}
 async function resultComponent(booking, query = '', verify = async () => ({ bookingId: 7, status: 'SUCCESS' })) {
   const calls = [];
   const dispatch = (action) => {
@@ -75,12 +98,12 @@ test('legacy ticket page never invents passenger details', async () => {
   assert.ok(text.includes('Bookings'));
 });
 
-test('supported Stripe intent maps correctly; session callback never verifies a session ID', async () => {
+test('Stripe intent maps correctly; session callback verifies by booking ID', async () => {
   assert.deepEqual(getPaymentVerificationRequest(new URLSearchParams('payment_intent=pi_real')),
     { stripePaymentIntentId: 'pi_real' });
   const { component, calls, tree } = await resultComponent(fixture('PENDING', 'PENDING'), 'session_id=cs_real');
   try {
-    assert.deepEqual(calls, [{ type: 'booking', id: '7' }]);
+    assert.deepEqual(calls, [{ type: 'verify', payload: { bookingId: '7' } }, { type: 'booking', id: '7' }]);
     assert.ok(textOf(tree).includes('Booking pending'));
   } finally { component.unmount(); }
 });
@@ -100,12 +123,13 @@ test('PaymentDto failure overrides confirmation and unrelated verified payment i
 
 test('pending Stripe callbacks refresh until the authoritative booking confirms', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const dispatch = () => ({ unwrap: async () => ++fetches === 1
+  const dispatch = (action) => ({ unwrap: async () => action === 'verify' ? { bookingId: 7, status: 'SUCCESS' } : ++fetches === 1
     ? fixture('PENDING', 'PENDING') : fixture('CONFIRMED', 'SUCCESS') });
   let fetches = 0;
   const component = await loadComponent('pages/traveler/BookingSuccess/BookingSuccess.jsx', {
     useParams: () => ({ bookingId: '7' }), useSearchParams: () => [new URLSearchParams('session_id=cs_real')],
     useNavigate: () => () => {}, useDispatch: () => dispatch,
+    verifyPayment: () => 'verify',
     getBookingById: (id) => id, getPaymentVerificationRequest, getPaymentResult,
   });
   try {
@@ -117,14 +141,36 @@ test('pending Stripe callbacks refresh until the authoritative booking confirms'
   } finally { component.unmount(); }
 });
 
+test('pending Checkout is verified again when Stripe finishes processing', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let verifications = 0;
+  const component = await loadComponent('pages/traveler/BookingSuccess/BookingSuccess.jsx', {
+    useParams: () => ({ bookingId: '7' }), useSearchParams: () => [new URLSearchParams()],
+    useNavigate: () => () => {}, useDispatch: () => (action) => ({ unwrap: async () => {
+      if (action === 'verify') return { bookingId: 7, status: ++verifications === 1 ? 'PENDING' : 'SUCCESS' };
+      return verifications < 2 ? fixture('PENDING', 'PENDING') : fixture('CONFIRMED', 'SUCCESS');
+    } }),
+    verifyPayment: () => 'verify', getBookingById: () => 'booking', getPaymentVerificationRequest, getPaymentResult,
+  });
+  try {
+    component.render(); component.flushEffects(); await settle();
+    assert.ok(textOf(component.render()).includes('Booking pending'));
+    t.mock.timers.tick(2000); await settle();
+    assert.equal(verifications, 2);
+    assert.ok(textOf(component.render()).includes('Booking Confirmed!'));
+  } finally { component.unmount(); }
+});
+
 test('route changes cannot display the previous booking or its late response', async () => {
   let bookingId = '7';
   const first = deferred();
   const second = deferred();
-  const dispatch = (id) => ({ unwrap: () => id === '7' ? first.promise : second.promise });
+  const dispatch = (id) => ({ unwrap: () => id === 'verify'
+    ? Promise.resolve({ bookingId, status: 'SUCCESS' }) : id === '7' ? first.promise : second.promise });
   const component = await loadComponent('pages/traveler/BookingSuccess/BookingSuccess.jsx', {
     useParams: () => ({ bookingId }), useSearchParams: () => [new URLSearchParams()],
     useNavigate: () => () => {}, useDispatch: () => dispatch,
+    verifyPayment: () => 'verify',
     getBookingById: (id) => id, getPaymentVerificationRequest, getPaymentResult,
   });
   try {
@@ -154,6 +200,36 @@ test('history download invokes the imported ticket generator with its booking', 
     await button.props.onClick();
     assert.equal(downloaded, booking);
   } finally { globalThis.document = originalDocument; }
+});
+
+test('booking history never formats missing flight dates as January 1 or null flight labels', async () => {
+  const component = await loadComponent('pages/traveler/BookingHistory/TravellerBookingCard.jsx');
+  const booking = { ...fixture('PENDING', 'PENDING'), flightName: null, flightNumber: null,
+    departureTime: null, arrivalTime: null, bookingDate: null };
+  const text = textOf(component.render({ booking }));
+  assert.ok(text.includes('Flight details unavailable'));
+  assert.ok(!text.includes('null (null)'));
+  assert.ok(!text.includes('Jan 1'));
+  assert.ok(!text.includes('1970'));
+  assert.ok(!text.includes('Invalid Date'));
+});
+
+test('history, printable ticket and PDF display flight details returned by the booking API', async () => {
+  const booking = { ...fixture('CONFIRMED', 'SUCCESS'), flightName: 'Hanoi - Ho Chi Minh City',
+    flightNumber: 'VN123', departureAirport: 'Noi Bai (HAN)', arrivalAirport: 'Tan Son Nhat',
+    departureTime: '2026-10-20T09:30:00', arrivalTime: '2026-10-20T11:30:00', flightDuration: '2h 0m' };
+  for (const path of ['pages/traveler/BookingHistory/TravellerBookingCard.jsx', 'pages/traveler/Ticket/Ticket.jsx',
+    'pages/traveler/Ticket/TicketPDF.jsx']) {
+    const component = await loadComponent(path, {
+      StyleSheet: { create: (styles) => styles },
+      useParams: () => ({ bookingId: '7' }), useNavigate: () => () => {}, useDispatch: () => () => {},
+      useSelector: () => ({ booking, loading: false, error: null }),
+    });
+    const text = textOf(component.render({ booking }));
+    for (const expected of ['VN123', 'Noi Bai (HAN)', 'Tan Son Nhat', '09:30', '11:30', '2h 0m']) {
+      assert.ok(text.includes(expected), `${path} is missing ${expected}`);
+    }
+  }
 });
 
 test('payment and cancel screens use booking history and never collect card details', async () => {

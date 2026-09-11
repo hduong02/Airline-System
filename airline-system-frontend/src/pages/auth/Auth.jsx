@@ -50,7 +50,7 @@ const Auth = ({isLogin}) => {
                 <Plane className="h-8 w-8 text-white" />
               </div>
               <div className="ml-4">
-                <h1 className="text-2xl font-bold text-white">SkyBooker</h1>
+                <h1 className="text-2xl font-bold text-white">AirlinePro</h1>
                 <p className="text-blue-200 text-sm">Premium Flight Management</p>
               </div>
             </div>
@@ -114,7 +114,7 @@ const Auth = ({isLogin}) => {
                     <Plane className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-3">
-                    <h1 className="text-xl font-bold text-gray-900">SkyBooker</h1>
+                    <h1 className="text-xl font-bold text-gray-900">AirlinePro</h1>
                   </div>
                 </div>
 

@@ -9,6 +9,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.enums.PaymentStatus;
 import com.example.payload.dto.PaymentDto;
@@ -104,6 +106,32 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             throw new Exception("No payment method provided");
         }
+    }
+
+    @Override
+    @Transactional
+    public PaymentDto verifyCheckoutPayment(Long bookingId, Long userId) throws Exception {
+        Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
+        if (userId == null || !userId.equals(payment.getUserId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment belongs to another user");
+        }
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return PaymentMapper.toDto(payment);
+        }
+        if (payment.getCheckoutSessionId() == null || payment.getCheckoutSessionId().isBlank()) {
+            throw new IllegalStateException("Checkout Session is missing for booking: " + bookingId);
+        }
+        // Read only: returning to the site must never expire an unpaid checkout.
+        var checkout = stripeService.fetchCheckoutState(payment.getCheckoutSessionId());
+        if (checkout.outcome() == CheckoutOutcome.PAID) {
+            if (checkout.paymentIntentId() == null || checkout.paymentIntentId().isBlank()) {
+                throw new IllegalStateException("Paid Checkout Session has no PaymentIntent");
+            }
+            payment.setProviderPaymentId(checkout.paymentIntentId());
+            return saveAndPublish(payment, true, "succeeded");
+        }
+        return PaymentMapper.toDto(payment);
     }
 
     @Override

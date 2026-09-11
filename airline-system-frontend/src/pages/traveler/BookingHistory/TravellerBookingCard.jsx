@@ -38,6 +38,7 @@ const TravellerBookingCard = ({ booking, navigate }) => {
   const [downloadingPDF, setDownloadingPDF] = React.useState(false)
 
   const formatDate = (dateString) => {
+    if (!dateString || Number.isNaN(new Date(dateString).getTime())) return 'N/A'
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
       day: 'numeric',
@@ -47,6 +48,7 @@ const TravellerBookingCard = ({ booking, navigate }) => {
   }
 
   const formatTime = (dateTimeString) => {
+    if (!dateTimeString || Number.isNaN(new Date(dateTimeString).getTime())) return 'N/A'
     return new Date(dateTimeString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -55,6 +57,7 @@ const TravellerBookingCard = ({ booking, navigate }) => {
   }
 
   const formatDateShort = (dateTimeString) => {
+    if (!dateTimeString || Number.isNaN(new Date(dateTimeString).getTime())) return 'N/A'
     return new Date(dateTimeString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric'
@@ -190,7 +193,7 @@ const TravellerBookingCard = ({ booking, navigate }) => {
                 <Plane className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold mb-1">{booking.flightName + " (" + booking.flightNumber + ")" || 'N/A'}</h3>
+                <h3 className="text-2xl font-bold mb-1">{booking.flightName || 'Flight details unavailable'}{booking.flightNumber ? ` (${booking.flightNumber})` : ''}</h3>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
                     <Ticket className="h-3.5 w-3.5" />

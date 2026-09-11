@@ -3,8 +3,6 @@
 @import "./components/animations.css";
 @import "./styles/animations.css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -41,6 +39,7 @@
 
 /* Base variables - light theme */
 :root {
+  color-scheme: light;
   --radius: 0.65rem;
 
   /* Light theme - white background */
@@ -79,54 +78,11 @@
   --sidebar-ring: 103 61 229;
 }
 
-/* Dark theme */
-.dark {
-  --background: 18 9 40; /* #120928 */
-  --foreground: 250 250 250;
-  --card: 18 9 40;
-  --card-foreground: 250 250 250;
-  --popover: 18 9 40;
-  --popover-foreground: 250 250 250;
-
-  /* Primary - #673de5 (same as light theme) */
-  --primary: 103 61 229; /* #673de5 */
-  --primary-foreground: 255 255 255;
-
-  /* Dark theme UI colors */
-  --secondary: 30 30 40;
-  --secondary-foreground: 250 250 250;
-  --muted: 30 30 40;
-  --muted-foreground: 160 160 170;
-  --accent: 30 30 40;
-  --accent-foreground: 250 250 250;
-  --destructive: 239 68 68;
-  --destructive-foreground: 255 255 255;
-  --border: 40 40 50;
-  --input: 40 40 50;
-  --ring: 103 61 229; /* #673de5 */
-
-  /* Sidebar dark */
-  --sidebar: 18 9 40;
-  --sidebar-foreground: 250 250 250;
-  --sidebar-primary: 103 61 229;
-  --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 30 30 40;
-  --sidebar-accent-foreground: 250 250 250;
-  --sidebar-border: 40 40 50;
-  --sidebar-ring: 103 61 229;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-  }
-
-  /* Optional: subtle gradient for dark theme */
-  .dark body {
-    background: linear-gradient(135deg, rgb(18 9 40), rgb(25 16 47));
-    background-attachment: fixed;
   }
 }

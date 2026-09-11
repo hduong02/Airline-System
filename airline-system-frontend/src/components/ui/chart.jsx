@@ -3,7 +3,7 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
 
-const THEMES = { light: "", dark: ".dark" }
+const THEMES = { light: "" }
 
 const ChartContext = React.createContext(null)
 

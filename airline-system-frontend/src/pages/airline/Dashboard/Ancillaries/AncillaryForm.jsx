@@ -287,7 +287,7 @@ const AncillaryForm = () => {
 
             {/* BAGGAGE METADATA - Show only if type is BAGGAGE */}
             {formik.values.type === "BAGGAGE" && (
-              <Card className="bg-blue-50 dark:bg-blue-950">
+              <Card className="bg-blue-50">
                 <CardHeader>
                   <CardTitle className="text-lg">Baggage Details</CardTitle>
                 </CardHeader>
@@ -399,7 +399,7 @@ const AncillaryForm = () => {
 
             {/* TRAVEL PROTECTION METADATA */}
             {formik.values.type === "TRAVEL_PROTECTION" && (
-              <Card className="bg-purple-50 dark:bg-purple-950">
+              <Card className="bg-purple-50">
                 <CardHeader>
                   <CardTitle className="text-lg">Protection Details</CardTitle>
                 </CardHeader>
@@ -425,7 +425,7 @@ const AncillaryForm = () => {
 
             {/* SPECIAL SERVICE METADATA */}
             {formik.values.type === "SPECIAL_SERVICE" && (
-              <Card className="bg-green-50 dark:bg-green-950">
+              <Card className="bg-green-50">
                 <CardHeader>
                   <CardTitle className="text-lg">Service Details</CardTitle>
                 </CardHeader>

@@ -152,12 +152,6 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.glass-dark {
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 /* Mobile-first responsive utilities */
 @media (max-width: 768px) {
   .mobile-card-stack {
@@ -248,19 +242,6 @@
       0 4px 6px -1px rgba(0, 0, 0, 0.1),
       0 2px 4px -1px rgba(0, 0, 0, 0.06),
       0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .bg-pattern-dots {
-    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0);
-  }
-  
-  .glass {
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 

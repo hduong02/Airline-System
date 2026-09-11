@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { ThemeToggle } from "@/components/theme-toggle"
 import AirlineSidebar from "../Sidebar/AirlineSidebar"
 import AirlineRoutes from "../routes/AirlineRoutes"
 import { useSelector, useDispatch } from "react-redux"
@@ -289,7 +288,6 @@ const AirlineDashboard = () => {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <ThemeToggle />
                 <Button variant="outline" className="flex items-center gap-2">
                   <Bell className="h-4 w-4" />
                   Notifications

@@ -32,9 +32,9 @@ const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
         <div className="flex items-center gap-2">
           <span
             className={`px-2 py-1 text-xs rounded font-medium ${flight.status === "SCHEDULED"
-                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                ? "bg-green-100 text-green-700"
                 : flight.status === "ACTIVE"
-                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                  ? "bg-blue-100 text-blue-700"
                   : "bg-muted text-muted-foreground"
               }`}
           >
@@ -185,7 +185,7 @@ const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
             variant="outline"
             size="sm"
             onClick={() => onDelete(flight.id)}
-            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            className="text-red-600 hover:text-red-700"
           >
             <Trash2 className="h-3 w-3 mr-1" />
             Delete

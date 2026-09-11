@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Stepper } from '@/components/ui/stepper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Shield, Sparkles, Zap, Users } from 'lucide-react';
+import { Shield, Sparkles, Zap, Users } from 'lucide-react';
 import { readOnboardingProgress, sanitizeOnboardingData } from '@/utils/onboardingProgress';
 import {
   OwnerDetailsStep,
@@ -130,17 +128,11 @@ const AirlineOnboardingWizard = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Enhanced background with animated gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-pink-600/20 animate-pulse"></div>
+      {/* Static gradients keep the background idle while users fill in the form. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(96,165,250,0.18),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(34,211,238,0.15),transparent_50%)]"></div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-30"></div>
-      </div>
-
-      {/* Floating decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-cyan-400/30 to-blue-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8">
@@ -158,7 +150,7 @@ const AirlineOnboardingWizard = () => {
             </p>
             <div className="flex items-center justify-center space-x-8 mt-8 text-gray-400">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 <span className="text-sm">Step {currentStep} of {steps.length}</span>
               </div>
               <div className="flex items-center space-x-2">
@@ -222,7 +214,7 @@ const AirlineOnboardingWizard = () => {
           </div>
 
           {/* Enhanced Step Content */}
-          <Card className="backdrop-blur-xl bg-white/95 shadow-2xl border-0 rounded-3xl overflow-hidden">
+          <Card className="bg-white shadow-2xl border-0 rounded-3xl overflow-hidden">
             <div className={`h-2 bg-gradient-to-r ${steps[currentStep - 1]?.color}`}></div>
             <CardHeader className="pb-6 pt-8 px-8">
               <div className="flex items-center space-x-4">

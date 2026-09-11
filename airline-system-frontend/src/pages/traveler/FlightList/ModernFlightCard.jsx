@@ -561,12 +561,12 @@ const ModernFlightCard = ({
                   </div>
 
                   {/* Price Breakdown Info */}
-                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-start gap-3">
                       <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-blue-900 dark:text-blue-100">
+                      <div className="text-sm text-blue-900">
                         <p className="font-medium mb-1">About this fare</p>
-                        <p className="text-blue-700 dark:text-blue-300">
+                        <p className="text-blue-700">
                           This is a {fare?.fareLabel || "standard"} fare. The final price includes all
                           mandatory taxes and fees. Additional services can be added during checkout.
                         </p>
@@ -641,14 +641,14 @@ const ModernFlightCard = ({
 
                       {/* Additional Info */}
                       {fare.baggagePolicy.additionalBaggageFee && (
-                        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                           <div className="flex items-start gap-3">
                             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                             <div className="text-sm">
-                              <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                              <p className="font-medium text-amber-900 mb-1">
                                 Additional Baggage
                               </p>
-                              <p className="text-amber-700 dark:text-amber-300">
+                              <p className="text-amber-700">
                                 Extra baggage can be added for$
                                 {fare.baggagePolicy.additionalBaggageFee} per piece (subject to
                                 availability).
@@ -801,14 +801,14 @@ const ModernFlightCard = ({
 
                       {/* Additional Notes */}
                       {fare.fareRules.additionalNotes && (
-                        <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="flex items-start gap-3">
                             <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                             <div className="text-sm">
-                              <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                              <p className="font-medium text-blue-900 mb-1">
                                 Important Information
                               </p>
-                              <p className="text-blue-700 dark:text-blue-300">
+                              <p className="text-blue-700">
                                 {fare.fareRules.additionalNotes}
                               </p>
                             </div>

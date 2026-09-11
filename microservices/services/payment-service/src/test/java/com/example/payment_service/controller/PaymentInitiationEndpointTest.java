@@ -2,6 +2,8 @@ package com.example.payment_service.controller;
 
 import com.example.enums.PaymentGateway;
 import com.example.payload.response.PaymentInitiateResponse;
+import com.example.payload.dto.PaymentDto;
+import com.example.enums.PaymentStatus;
 import com.example.payment_service.service.PaymentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -20,6 +22,28 @@ class PaymentInitiationEndpointTest {
     private final String request = """
             {"userId":2,"bookingId":1,"amount":100,"gateway":"STRIPE"}
             """;
+
+    @Test
+    void verifyCheckoutUsesBookingIdAndAuthenticatedUser() throws Exception {
+        PaymentDto payment = new PaymentDto();
+        payment.setBookingId(1L);
+        payment.setStatus(PaymentStatus.SUCCESS);
+        when(service.verifyCheckoutPayment(1L, 2L)).thenReturn(payment);
+        mvc.perform(post("/api/payments/verify").header("X-User-Id", "2")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bookingId\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+        verify(service).verifyCheckoutPayment(1L, 2L);
+        verify(service, never()).verifyPayment(any());
+    }
+
+    @Test
+    void verifyCheckoutRequiresAuthenticatedUserHeader() throws Exception {
+        mvc.perform(post("/api/payments/verify")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bookingId\":1}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
 
     @Test
     void publicInitiationIsNotAvailable() throws Exception {

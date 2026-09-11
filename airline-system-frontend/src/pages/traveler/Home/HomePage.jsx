@@ -135,9 +135,9 @@ const HomePage = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section with Gradient */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 dark:from-blue-900 dark:via-blue-950 dark:to-slate-950 min-h-[85vh]s flex items-center overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 min-h-[85vh]s flex items-center overflow-hidden">
 
         {/* Animated Background Pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -225,13 +225,13 @@ const HomePage = () => {
       </section>
 
       {/* Offers Section */}
-      <section className="py-16 bg-white dark:bg-slate-900">
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
               Offers
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Explore great deals and offers on flights
             </p>
           </div>
@@ -244,14 +244,14 @@ const HomePage = () => {
                   <div className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${offer.color} text-white mb-4`}>
                     {offer.icon}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
                     {offer.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <p className="text-sm text-gray-600 mb-3">
                     {offer.subtitle}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-mono">
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-900 font-mono">
                       {offer.code}
                     </Badge>
                   </div>
@@ -263,13 +263,13 @@ const HomePage = () => {
       </section>
 
       {/* Why Book With Us Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-950 dark:to-slate-900">
+      <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
               Why Book With Us?
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               We make travel planning simple, affordable, and stress-free
             </p>
           </div>
@@ -280,10 +280,10 @@ const HomePage = () => {
                 <div className={`inline-flex p-6 rounded-2xl bg-gradient-to-br ${item.gradient} text-white mb-5 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                   {item.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
                   {item.title}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                <p className="text-gray-600 leading-relaxed">
                   {item.description}
                 </p>
               </div>
@@ -293,13 +293,13 @@ const HomePage = () => {
       </section>
 
       {/* Popular Destinations */}
-      <section className="py-20 bg-white dark:bg-slate-900">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
               Popular Destinations
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
+            <p className="text-lg text-gray-600">
               Fly to your dream destination at the best prices
             </p>
           </div>
@@ -340,8 +340,8 @@ const HomePage = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Starting from</p>
-                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      <p className="text-xs text-gray-500 mb-1">Starting from</p>
+                      <p className="text-2xl font-bold text-blue-600">
                         {destination.price}
                       </p>
                     </div>
@@ -355,7 +355,7 @@ const HomePage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-900 dark:via-indigo-900 dark:to-purple-900 overflow-hidden">
+      <section className="relative py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full" style={{

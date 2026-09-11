@@ -17,6 +17,8 @@ public interface PaymentService {
 
     PaymentDto verifyPayment(PaymentVerifyRequest request) throws Exception;
 
+    PaymentDto verifyCheckoutPayment(Long bookingId, Long userId) throws Exception;
+
     PaymentDto reconcileExpiredCheckout(Long bookingId) throws Exception;
 
     Page<PaymentDto> getAllPayments(Pageable pageable);

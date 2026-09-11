@@ -229,7 +229,7 @@ const SearchResults = () => {
     <div className="min-h-screen relative overflow-hidden">
       {/* Two-Tone Background - Goibibo Style */}
       {/* Top 30% - Darker/Colored Section */}
-      <div className="absolute top-0 left-0 right-0 h-[30vh] bg-gradient-to-br from-blue-900 via-blue-950 to-[#1B1464] dark:from-blue-950 dark:via-slate-950 dark:to-indigo-950">
+      <div className="absolute top-0 left-0 right-0 h-[30vh] bg-gradient-to-br from-blue-900 via-blue-950 to-[#1B1464]">
         {/* Decorative elements for top section */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
@@ -250,7 +250,7 @@ const SearchResults = () => {
       </div>
 
       {/* Bottom 70% - Light Section */}
-      <div className="absolute top-[30vh] left-0 right-0 bottom-0 bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-400 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+      <div className="absolute top-[30vh] left-0 right-0 bottom-0 bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-400">
         {/* Decorative elements for bottom section */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
@@ -264,7 +264,7 @@ const SearchResults = () => {
 
           {/* Subtle Pattern */}
           <div
-            className="absolute inset-0 opacity-[0.02] dark:opacity-[0.01]"
+            className="absolute inset-0 opacity-[0.02]"
             style={{
               backgroundImage: `radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)`,
               backgroundSize: "40px 40px",
@@ -282,7 +282,7 @@ const SearchResults = () => {
         >
           <path
             fill="currentColor"
-            className="text-gray-50 dark:text-slate-900"
+            className="text-gray-50"
             d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,64C960,75,1056,85,1152,80C1248,75,1344,53,1392,42.7L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"
           ></path>
         </svg>
@@ -294,7 +294,7 @@ const SearchResults = () => {
           <Button
             variant="outline"
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="w-full flex items-center justify-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md hover:bg-white dark:hover:bg-slate-800 transition-all shadow-md hover:shadow-lg border-blue-200 dark:border-blue-800"
+            className="w-full flex items-center justify-center gap-2 bg-white/90 backdrop-blur-md hover:bg-white transition-all shadow-md hover:shadow-lg border-blue-200"
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filters & Sort
@@ -333,13 +333,13 @@ const SearchResults = () => {
           >
             <div className="relative">
                 {/* Decorative gradient behind filter */}
-                <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5 rounded-2xl blur-xl"></div>
+                <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl blur-xl"></div>
                 <div className="relative">
                   <FiltersSidebar
                     filters={filters}
                     onFiltersChange={setFilters}
                     airlines={dropdownAirlines}
-                    className="animate-slide-in-left bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-xl"
+                    className="animate-slide-in-left bg-white/80 backdrop-blur-md shadow-xl"
                   />
                 </div>
             </div>
@@ -349,7 +349,7 @@ const SearchResults = () => {
           <div className="lg:col-span-3 space-y-4" aria-busy={updating}>
             {/* Enhanced Sorting Bar with glow effect */}
             <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 dark:from-blue-500/10 dark:to-purple-500/10 rounded-xl blur-lg"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur-lg"></div>
               <div className="relative">
                 <SortingBar
                   sortBy={sortBy}
@@ -359,7 +359,7 @@ const SearchResults = () => {
                   resultsCount={displayedResults?.content?.length}
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
-                  className="animate-slide-in-top bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-lg"
+                  className="animate-slide-in-top bg-white/90 backdrop-blur-md shadow-lg"
                 />
               </div>
             </div>
@@ -389,7 +389,7 @@ const SearchResults = () => {
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     {/* Subtle hover glow effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/20 group-hover:to-purple-500/20 dark:group-hover:from-blue-500/10 dark:group-hover:to-purple-500/10 rounded-2xl blur-lg transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/20 group-hover:to-purple-500/20 rounded-2xl blur-lg transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
                     <div className="relative">
                       <ModernFlightCard
                         flight={flight}
@@ -398,7 +398,7 @@ const SearchResults = () => {
                         onBookmark={handleBookmark}
                         isBookmarked={bookmarkedFlights.has(flight.id)}
                         viewMode={viewMode}
-                        className="card-hover bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300"
+                        className="card-hover bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300"
                       />
                     </div>
                   </div>
@@ -415,7 +415,7 @@ const SearchResults = () => {
                     variant="outline"
                     onClick={loadMore}
                     disabled={loadingMore || bookingDisabled}
-                    className="relative px-8 py-3 bg-white dark:bg-slate-800 backdrop-blur-sm hover:bg-white dark:hover:bg-slate-800 transition-all duration-200 shadow-lg hover:shadow-xl border-blue-200 dark:border-blue-800 font-semibold"
+                    className="relative px-8 py-3 bg-white backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg hover:shadow-xl border-blue-200 font-semibold"
                   >
                     {loadingMore ? "Loading flights..." : "Load more flights"}
                   </Button>
@@ -433,7 +433,7 @@ const SearchResults = () => {
             <Button
               variant="secondary"
               size="sm"
-              className="relative rounded-full w-12 h-12 p-0 bg-white dark:bg-slate-800 backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-200 hover:scale-110 float-animation border-2 border-blue-200 dark:border-blue-700"
+              className="relative rounded-full w-12 h-12 p-0 bg-white backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-200 hover:scale-110 float-animation border-2 border-blue-200"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             >
               <span className="text-lg">⬆️</span>

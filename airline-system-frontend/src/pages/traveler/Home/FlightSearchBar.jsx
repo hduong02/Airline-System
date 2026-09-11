@@ -189,19 +189,19 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
 
   return (
     <div className={cn(
-      "bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-800",
+      "bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100",
       className
     )}>
       {/* Trip Type Tabs */}
-      <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-3 sm:px-8 py-6 border-b border-gray-200 dark:border-slate-700">
-        <div className="flex space-x-2 bg-white dark:bg-slate-800 rounded-2xl p-2 shadow-sm border border-gray-200 dark:border-slate-700">
+      <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 sm:px-8 py-6 border-b border-gray-200">
+        <div className="flex space-x-2 bg-white rounded-2xl p-2 shadow-sm border border-gray-200">
           <button
             disabled title="Round trips are not available yet"
             className={cn(
               "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 relative overflow-hidden",
               tripType === "roundTrip"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             )}
           >
             Round Trip
@@ -212,7 +212,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
               "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
               tripType === "oneWay"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             )}
           >
             One Way
@@ -223,7 +223,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
               "px-3 sm:px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300",
               tripType === "multiCity"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             )}
           >
             Multi City
@@ -234,17 +234,17 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
       <div className="p-3 sm:p-8">
         {searchError && <p role="alert" className="text-red-600 mb-4">{searchError}</p>}
         {/* Combined Flight Search Section - All in One Line */}
-        <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-800 rounded-2xl p-1 mb-6">
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-2xl p-1 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-y-3">
             {/* From */}
             <div className="relative group min-w-0 w-[calc(50%-2.5rem)] lg:w-0 lg:flex-1">
-              <div className="p-2 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-blue-400 dark:hover:border-blue-600 h-full">
+              <div className="p-2 sm:p-4 rounded-2xl bg-white hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-blue-400 h-full">
                 <div className="flex items-start gap-3">
                   <div className="hidden sm:block shrink-0 p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
                     <Plane className="h-5 w-5 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">From</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
                     <AirportPicker
                       label="From" airports={airports} value={Number(searchData.departureAirportId) || null}
                       excludedId={Number(searchData.arrivalAirportId) || null}
@@ -269,13 +269,13 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
 
             {/* To */}
             <div className="relative group min-w-0 w-[calc(50%-2.5rem)] lg:w-0 lg:flex-1">
-              <div className="p-2 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-green-400 dark:hover:border-green-600 h-full">
+              <div className="p-2 sm:p-4 rounded-2xl bg-white hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-green-400 h-full">
                 <div className="flex items-start gap-3">
                   <div className="hidden sm:block shrink-0 p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg">
                     <Plane className="h-5 w-5 text-white rotate-90" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 block">To</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
                     <AirportPicker
                       label="To" airports={airports} value={Number(searchData.arrivalAirportId) || null}
                       excludedId={Number(searchData.departureAirportId) || null}
@@ -289,23 +289,23 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
             {/* Departure Date */}
             <Dialog open={departureDateOpen} onOpenChange={setDepartureDateOpen}>
               <DialogTrigger asChild>
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-orange-400 dark:hover:border-orange-600 group h-full">
+                <div className="p-4 rounded-2xl bg-white hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-orange-400 group h-full">
                   <div className="flex items-start gap-2">
                     <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg">
                       <CalendarDays className="h-4 w-4 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <label className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-widest mb-1 block">Departure</label>
+                      <label className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-1 block">Departure</label>
                       <div className="flex items-baseline gap-1">
-                        <div className="text-xl font-black text-gray-900 dark:text-white">
+                        <div className="text-xl font-black text-gray-900">
                           {formatDate(searchData.departureDate).day}
                         </div>
-                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                        <div className="text-xs font-bold text-gray-700">
                           {formatDate(searchData.departureDate).month}
                         </div>
                       </div>
 
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-gray-500">
                         {searchData.departureDate ? formatDate(searchData.departureDate).weekday : "Select"}
                       </div>
 
@@ -338,17 +338,17 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
             {/* Passengers */}
             <Dialog open={passengersOpen} onOpenChange={setPassengersOpen}>
               <DialogTrigger asChild>
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-pink-400 dark:hover:border-pink-600 group h-full">
+                <div className="p-4 rounded-2xl bg-white hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-pink-400 group h-full">
                   <div className="flex items-start gap-2">
                     <div className="p-2 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow-lg">
                       <Users className="h-4 w-4 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <label className="text-xs font-bold text-pink-700 dark:text-pink-400 uppercase tracking-widest mb-1 block">Travelers</label>
-                      <div className="text-xl font-black text-gray-900 dark:text-white">
+                      <label className="text-xs font-bold text-pink-700 uppercase tracking-widest mb-1 block">Travelers</label>
+                      <div className="text-xl font-black text-gray-900">
                         {searchData.numberOfTravellers}
                       </div>
-                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      <div className="text-xs font-medium text-gray-500">
                         {searchData.numberOfTravellers === 1 ? "Traveller" : "Travellers"}
                       </div>
                     </div>
@@ -360,26 +360,26 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                   <DialogTitle className="text-2xl font-bold">Select passengers</DialogTitle>
                 </DialogHeader>
                 <div className="py-8">
-                  <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-800 p-6 rounded-2xl">
+                  <div className="flex items-center justify-between bg-gray-50 p-6 rounded-2xl">
                     <div>
-                      <div className="font-bold text-lg text-gray-900 dark:text-white">Passengers</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Age 12+</div>
+                      <div className="font-bold text-lg text-gray-900">Passengers</div>
+                      <div className="text-sm text-gray-500">Age 12+</div>
                     </div>
                     <div className="flex items-center gap-5">
                       <button
                         onClick={() => adjustPassengers(-1)}
                         disabled={searchData.numberOfTravellers <= 1}
-                        className="h-12 w-12 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xl transition-all hover:scale-110"
+                        className="h-12 w-12 rounded-xl border-2 border-gray-300 bg-white hover:border-blue-500 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xl transition-all hover:scale-110"
                       >
                         -
                       </button>
-                      <span className="w-14 text-center text-3xl font-black text-gray-900 dark:text-white">
+                      <span className="w-14 text-center text-3xl font-black text-gray-900">
                         {searchData.numberOfTravellers}
                       </span>
                       <button
                         onClick={() => adjustPassengers(1)}
                         disabled={searchData.numberOfTravellers >= 9}
-                        className="h-12 w-12 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xl transition-all hover:scale-110"
+                        className="h-12 w-12 rounded-xl border-2 border-gray-300 bg-white hover:border-blue-500 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xl transition-all hover:scale-110"
                       >
                         +
                       </button>
@@ -396,20 +396,20 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
             </Dialog>
 
             {/* Cabin Class */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-cyan-400 dark:hover:border-cyan-600 group h-full">
+            <div className="p-4 rounded-2xl bg-white hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-cyan-400 group h-full">
               <div className="flex items-start gap-2">
                 <div className="p-2 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg shadow-lg">
                   <Plane className="h-4 w-4 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <label className="text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-widest mb-1 block">Class</label>
+                  <label className="text-xs font-bold text-cyan-700 uppercase tracking-widest mb-1 block">Class</label>
                   <Select
                     value={searchData.cabinClass}
                     onValueChange={(value) => setSearchData(prev => ({ ...prev, cabinClass: value }))}
                   >
                     <SelectTrigger className="border-0 shadow-none p-0 h-auto focus:ring-0 bg-transparent">
                       <div className="text-left">
-                        <div className="text-sm font-black text-gray-900 dark:text-white">
+                        <div className="text-sm font-black text-gray-900">
                           <SelectValue />
                         </div>
                       </div>
@@ -431,8 +431,8 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
         {/* Special Fares */}
         <div className="mt-8 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Select Special Fares</span>
-            <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent dark:from-gray-600"></div>
+            <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Select Special Fares</span>
+            <div className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {specialFares.map((fare) => {
@@ -444,8 +444,8 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                   className={cn(
                     "relative p-4 rounded-xl border-2 transition-all duration-300 text-left group hover:shadow-md",
                     specialFare === fare.id
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md shadow-blue-500/20"
-                      : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
+                      ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-500/20"
+                      : "border-gray-200 bg-white hover:border-blue-300"
                   )}
                 >
                   {/* Check Icon */}
@@ -460,7 +460,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                     "mb-2 p-2 rounded-lg w-fit transition-colors",
                     specialFare === fare.id
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      : "bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600"
                   )}>
                     <Icon className="h-4 w-4" />
                   </div>
@@ -468,7 +468,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                   {/* Label */}
                   <div className={cn(
                     "font-bold text-sm mb-1",
-                    specialFare === fare.id ? "text-blue-700 dark:text-blue-400" : "text-gray-900 dark:text-white"
+                    specialFare === fare.id ? "text-blue-700" : "text-gray-900"
                   )}>
                     {fare.label}
                   </div>
@@ -476,7 +476,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                   {/* Description */}
                   <div className={cn(
                     "text-xs leading-tight",
-                    specialFare === fare.id ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                    specialFare === fare.id ? "text-blue-600" : "text-gray-500"
                   )}>
                     {fare.description}
                   </div>
@@ -488,7 +488,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
                         "text-xs font-bold px-2 py-1 rounded-full",
                         specialFare === fare.id
                           ? "bg-blue-600 text-white"
-                          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          : "bg-green-100 text-green-700"
                       )}>
                         {fare.discount}
                       </span>

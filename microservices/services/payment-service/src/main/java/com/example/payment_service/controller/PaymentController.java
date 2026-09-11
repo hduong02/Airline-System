@@ -27,8 +27,11 @@ public class PaymentController {
 
     @PostMapping("/verify")
     public ResponseEntity<?> verifyPayment(
-            @Valid @RequestBody PaymentVerifyRequest request) throws Exception {
-        PaymentDto payment = paymentService.verifyPayment(request);
+            @Valid @RequestBody PaymentVerifyRequest request,
+            @RequestHeader("X-User-Id") Long userId) throws Exception {
+        PaymentDto payment = request.getBookingId() != null
+                ? paymentService.verifyCheckoutPayment(request.getBookingId(), userId)
+                : paymentService.verifyPayment(request);
         return ResponseEntity.ok(payment);
     }
 

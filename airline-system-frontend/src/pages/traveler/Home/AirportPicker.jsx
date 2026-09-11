@@ -50,8 +50,8 @@ export default function AirportPicker({ label, airports, value, excludedId, onCh
         <button type="button" title={selected ? locationLabel(selected) : undefined} aria-label={`${label}: ${selected ? `${selected.iataCode} ${locationLabel(selected)}` : "Select airport"}`} aria-haspopup="dialog" aria-expanded={open}
           className="flex min-w-0 w-full items-center gap-2 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           <span className="min-w-0 flex-1">
-            <span className="block text-2xl font-black text-gray-900 dark:text-white">{selected?.iataCode || "---"}</span>
-            <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 truncate">{locationLabel(selected) || "Select City"}</span>
+            <span className="block text-2xl font-black text-gray-900">{selected?.iataCode || "---"}</span>
+            <span className="block text-xs font-medium text-gray-600 truncate">{locationLabel(selected) || "Select City"}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0" />
         </button>
@@ -67,7 +67,7 @@ export default function AirportPicker({ label, airports, value, excludedId, onCh
           {!loading && !error && visible.map((airport, index) => (
             <div key={airport.id} id={`${listId}-${airport.id}`} role="option" aria-selected={Number(airport.id) === value}
               ref={element => { optionRefs.current[index] = element }} onMouseMove={() => setActiveIndex(index)} onMouseDown={event => event.preventDefault()} onClick={() => select(airport)}
-              className={`flex items-center gap-3 rounded-lg p-3 cursor-pointer ${index === active ? "bg-blue-50 dark:bg-blue-950" : "hover:bg-muted"}`}>
+              className={`flex items-center gap-3 rounded-lg p-3 cursor-pointer ${index === active ? "bg-blue-50" : "hover:bg-muted"}`}>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold [overflow-wrap:anywhere]">{airport.iataCode} – {locationLabel(airport)}</div>
                 <div className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{airport.name}</div>

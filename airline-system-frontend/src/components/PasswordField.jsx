@@ -16,7 +16,7 @@ const PasswordField = ({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={name} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <Label htmlFor={name} className="text-sm font-medium text-gray-700">
         {label}
       </Label>
       <div className="relative">
@@ -24,7 +24,7 @@ const PasswordField = ({
           id={name}
           type={showPassword ? 'text' : 'password'}
           placeholder={placeholder}
-          className={`w-full pr-10 transition-all duration-200 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:bg-gray-800 dark:border-gray-700 ${meta.touched && meta.error ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
+          className={`w-full pr-10 transition-all duration-200 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 ${meta.touched && meta.error ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
           disabled={disabled}
           {...field}
         />
@@ -37,9 +37,9 @@ const PasswordField = ({
           disabled={disabled}
         >
           {showPassword ? (
-            <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <EyeOff className="h-4 w-4 text-gray-500" />
           ) : (
-            <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Eye className="h-4 w-4 text-gray-500" />
           )}
         </Button>
       </div>

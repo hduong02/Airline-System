@@ -44,10 +44,10 @@ const FlightInstanceCabinCard = ({ cabin, occupancyPercentage }) => {
       key={cabin.id}
       className="hover:shadow-lg transition-all duration-300 cursor-pointer hover-lift border-l-4 border-l-blue-500"
     >
-      <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+      <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
               <span className="text-xl">
                 {getCabinClassIcon(cabin?.cabinClassType || cabin?.cabinClass?.type)}
               </span>
@@ -113,7 +113,7 @@ const FlightInstanceCabinCard = ({ cabin, occupancyPercentage }) => {
               <DollarSign className="h-4 w-4 text-green-600" />
               <span className="font-medium text-sm">Pricing Details</span>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-green-600">
                   {formatCurrency(primaryFare.currentPrice || primaryFare.totalPrice)}
@@ -209,7 +209,7 @@ const FlightInstanceCabinCard = ({ cabin, occupancyPercentage }) => {
               <LayoutGrid className="h-4 w-4 text-blue-600" />
               <span className="font-medium text-sm">Seat Configuration</span>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+            <div className="bg-blue-50 rounded-lg p-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total Rows:</span>
@@ -244,7 +244,7 @@ const FlightInstanceCabinCard = ({ cabin, occupancyPercentage }) => {
               <Calendar className="h-4 w-4 text-indigo-600" />
               <span className="font-medium text-sm">Booking Window</span>
             </div>
-            <div className="text-xs text-muted-foreground bg-indigo-50 dark:bg-indigo-950/20 p-2 rounded">
+            <div className="text-xs text-muted-foreground bg-indigo-50 p-2 rounded">
               {cabin.minAdvanceBookingDays && `Min: ${cabin.minAdvanceBookingDays} days advance`}
               {cabin.minAdvanceBookingDays && cabin.maxAdvanceBookingDays && ' | '}
               {cabin.maxAdvanceBookingDays && `Max: ${cabin.maxAdvanceBookingDays} days advance`}
