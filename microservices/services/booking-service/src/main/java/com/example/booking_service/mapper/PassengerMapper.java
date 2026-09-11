@@ -8,6 +8,7 @@ public class PassengerMapper {
 
     public static Passenger toEntity(PassengerRequest request) {
         return Passenger.builder()
+                .seatInstanceId(request.getSeatInstanceId())
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
@@ -21,6 +22,7 @@ public class PassengerMapper {
     public static PassengerResponse toResponse(Passenger passenger) {
         return PassengerResponse.builder()
                 .id(passenger.getId())
+                .seatInstanceId(passenger.getSeatInstanceId())
                 .firstName(passenger.getFirstName())
                 .lastName(passenger.getLastName())
                 .email(passenger.getEmail())

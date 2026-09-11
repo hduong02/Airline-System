@@ -344,7 +344,17 @@ public class BookingServiceImpl implements BookingService {
             FlightResponse flightResponse, FlightInstanceResponse flightInstanceResponse) {
         List<FlightCabinAncillaryResponse> ancillaryResponses = new ArrayList<>();
         List<FlightMealResponse> mealResponses = new ArrayList<>();
-        List<SeatInstanceResponse> seatInstanceResponses = new ArrayList<>();
+        List<SeatInstanceResponse> seatInstanceResponses = List.of();
+        if (booking.getFlightInstanceId() != null && booking.getSeatInstanceIds() != null
+                && !booking.getSeatInstanceIds().isEmpty()) {
+            FlightInstanceCabinResponse cabin = seatClient.getFlightInstanceCabin(
+                    booking.getFlightInstanceId(), booking.getCabinClass());
+            Map<Long, SeatInstanceResponse> cabinSeats = cabin == null || cabin.getSeats() == null
+                    ? Map.of() : cabin.getSeats().stream().collect(Collectors.toMap(
+                            SeatInstanceResponse::getId, seat -> seat));
+            seatInstanceResponses = booking.getSeatInstanceIds().stream()
+                    .map(cabinSeats::get).filter(Objects::nonNull).toList();
+        }
 
         return BookingMapper.toResponse(booking,
                 paymentDto,

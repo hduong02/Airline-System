@@ -17,6 +17,7 @@ import com.example.enums.Gender;
 public class PassengerResponse {
 
     private Long id;
+    private Long seatInstanceId;
     private String firstName;
     private String lastName;
     private String email;

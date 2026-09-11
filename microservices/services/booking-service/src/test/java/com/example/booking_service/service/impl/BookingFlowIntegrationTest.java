@@ -67,14 +67,20 @@ class BookingFlowIntegrationTest {
         bookingRepository.deleteAll();
         passengerRepository.deleteAll();
 
-        when(flights.getFlightById(10L)).thenReturn(FlightResponse.builder().id(10L)
+        when(flights.getFlightById(10L)).thenReturn(FlightResponse.builder().id(10L).flightNumber("VN123")
+                .departureAirport(AirportResponse.builder().name("Noi Bai").detailedName("Noi Bai (HAN)")
+                        .city(CityResponse.builder().name("Hanoi").build()).build())
+                .arrivalAirport(AirportResponse.builder().name("Tan Son Nhat")
+                        .city(CityResponse.builder().name("Ho Chi Minh City").build()).build())
                 .airline(AirlineResponse.builder().id(50L).build()).build());
         when(flights.getFlightInstanceById(20L)).thenReturn(FlightInstanceResponse.builder()
-                .id(20L).flightId(10L).build());
+                .id(20L).flightId(10L)
+                .departureDateTime(java.time.LocalDateTime.of(2026, 10, 20, 9, 30))
+                .arrivalDateTime(java.time.LocalDateTime.of(2026, 10, 20, 11, 30)).build());
         when(seats.getFlightInstanceCabin(20L, CabinClassType.ECONOMY))
                 .thenReturn(FlightInstanceCabinResponse.builder().id(40L).flightInstanceId(20L)
                         .cabinClassType(CabinClassType.ECONOMY).availableSeats(1)
-                        .seats(List.of(SeatInstanceResponse.builder().id(100L).flightId(10L)
+                        .seats(List.of(SeatInstanceResponse.builder().id(100L).seatNumber("12A").flightId(10L)
                                 .flightInstanceId(20L).flightCabinId(40L).build())).build());
         FareResponse fare = FareResponse.builder().id(30L).flightId(10L)
                 .cabinClass(CabinClassType.ECONOMY).baseFare(100.0)
@@ -117,6 +123,15 @@ class BookingFlowIntegrationTest {
         assertEquals(155.0, confirmed.getTotalAmount());
         assertEquals(pending.getBookingReference(), confirmed.getBookingReference());
         assertEquals(1, confirmed.getTickets().size());
+        assertEquals("VN123", confirmed.getFlightNumber());
+        assertEquals("Noi Bai (HAN)", confirmed.getDepartureAirport());
+        assertEquals("Tan Son Nhat", confirmed.getArrivalAirport());
+        assertEquals(java.time.LocalDateTime.of(2026, 10, 20, 9, 30), confirmed.getDepartureTime());
+        assertEquals(java.time.LocalDateTime.of(2026, 10, 20, 11, 30), confirmed.getArrivalTime());
+        assertEquals(List.of("12A"), confirmed.getSeatInstances().stream()
+                .map(SeatInstanceResponse::getSeatNumber).toList());
+        assertEquals(100L, confirmed.getPassengers().getFirst().getSeatInstanceId());
+        assertEquals("12A", bookings.getBookingsByUser(1L).getFirst().getSeatInstances().getFirst().getSeatNumber());
         assertEquals(TicketStatus.BOOKED, confirmed.getTickets().getFirst().getStatus());
         assertFalse(confirmed.getTickets().getFirst().getTicketNumber().isBlank());
         assertEquals(9L, bookingRepository.findById(bookingId).orElseThrow().getPaymentId());

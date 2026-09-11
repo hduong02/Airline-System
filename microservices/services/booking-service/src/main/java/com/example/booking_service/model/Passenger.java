@@ -47,6 +47,8 @@ public class Passenger {
 
     private Long primaryUserId;
 
+    private Long seatInstanceId;
+
     @ManyToOne
     private Booking booking;
 

@@ -188,6 +188,9 @@ const fmtDateShort = (dt) =>
 // ── PDF Document ──────────────────────────────────────────────────────
 const TicketPDFDocument = ({ booking }) => {
   const baseFare = booking.fareBaseFare || 0
+  const firstSeat = booking.passengers?.[0]?.seatInstanceId != null
+    ? booking.seatInstances?.find((seat) => String(seat.id) === String(booking.passengers[0].seatInstanceId))
+    : booking.seatInstances?.[0]
   const taxes = booking.fareTaxesAndFees || 0
   const fees = booking.fareAirlineFees || 0
   const total = booking.totalAmount || (baseFare + taxes + fees)
@@ -270,7 +273,9 @@ const TicketPDFDocument = ({ booking }) => {
           <Text style={s.colClass}>CLASS</Text>
         </View>
         {(booking.passengers || []).map((p, i) => {
-          const seat = booking.seatInstances?.[i]
+          const seat = p.seatInstanceId != null
+            ? booking.seatInstances?.find((seat) => String(seat.id) === String(p.seatInstanceId))
+            : booking.seatInstances?.[i]
           const name = p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim() || '—'
           return (
             <View key={i} style={s.tableRow}>
@@ -345,8 +350,8 @@ const TicketPDFDocument = ({ booking }) => {
             </Text>
             <Text style={s.stubMeta}>
               {booking.passengers?.[0]?.fullName || 'Passenger'}
-              {booking.seatInstances?.[0]?.seatNumber
-                ? `   Seat ${booking.seatInstances[0].seatNumber}`
+              {firstSeat?.seatNumber
+                ? `   Seat ${firstSeat.seatNumber}`
                 : ''}
             </Text>
             <Text style={s.stubMeta}>

@@ -90,6 +90,9 @@ const Ticket = () => {
   )
 
   const baseFare = booking.fareBaseFare || 0
+  const firstSeat = booking.passengers?.[0]?.seatInstanceId != null
+    ? booking.seatInstances?.find((seat) => String(seat.id) === String(booking.passengers[0].seatInstanceId))
+    : booking.seatInstances?.[0]
   const taxes = booking.fareTaxesAndFees || 0
   const fees = booking.fareAirlineFees || 0
   const total = booking.totalAmount || (baseFare + taxes + fees)
@@ -151,7 +154,7 @@ const Ticket = () => {
             ["PNR", booking.bookingReference || "—"],
             ["Flight", booking.flightNumber || "—"],
             ["Class", booking.fareName || "Economy"],
-            ["Date", fmt.date(booking.bookingDate)],
+            ["Flight Date", fmt.date(booking.departureTime)],
           ].map(([label, value]) => (
             <div key={label} className="py-3.5 px-4">
               <div className="text-[9px] uppercase tracking-[0.18em] text-gray-400 mb-1.5">{label}</div>
@@ -235,7 +238,9 @@ const Ticket = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(booking.passengers || []).map((p, i) => {
-                const seat = booking.seatInstances?.[i]
+                const seat = p.seatInstanceId != null
+                  ? booking.seatInstances?.find((seat) => String(seat.id) === String(p.seatInstanceId))
+                  : booking.seatInstances?.[i]
                 const name = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "—"
                 return (
                   <tr key={i}>
@@ -328,9 +333,9 @@ const Ticket = () => {
             </div>
             <div className="text-[12px] text-gray-600">
               {booking.passengers?.[0]?.fullName || "Passenger"}
-              {booking.seatInstances?.[0]?.seatNumber && (
+              {firstSeat?.seatNumber && (
                 <span className="ml-3 font-mono font-bold text-gray-900">
-                  Seat {booking.seatInstances[0].seatNumber}
+                  Seat {firstSeat.seatNumber}
                 </span>
               )}
             </div>
