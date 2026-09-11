@@ -91,6 +91,8 @@ const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
     setSelectedCabinId(id);
   };
 
+  const handleFareSelect = React.useCallback((fare) => setSelectedFare(fare), []);
+
   const handleContinueBooking = () => {
     if (!canContinue) return;
 
@@ -220,7 +222,7 @@ const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
                 key={fare?.id || index}
                 fare={fare}
                 isSelected={selectedFare?.id === fare?.id}
-                onSelect={() => setSelectedFare(fare)}
+                onSelect={handleFareSelect}
                 passengerCount={passengerCount}
                 flightType={flight?.flightType}
               />

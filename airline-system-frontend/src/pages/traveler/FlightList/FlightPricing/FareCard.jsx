@@ -52,12 +52,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
-
-
+// Benefits and price breakdown do not change when selection changes.
+const FareBenefits = React.memo(function FareBenefits({ fare, passengerCount }) {
   const { baseFare, taxes, airlineFees, subtotal } = calculateBookingTotals({ fare, passengerCount });
-  const { subtotal: pricePerPassenger } = calculateBookingTotals({ fare });
-
   // Organize benefits by category with rich details
   const getBenefitCategories = (fare) => {
     const categories = {
@@ -355,168 +352,7 @@ const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
   };
 
   const benefitCategories = getBenefitCategories(fare);
-
-  // Get fare label with premium styling
-  const getFareStyle = () => {
-    const styles = {
-      Basic: {
-        gradient: "from-gray-500 to-gray-600",
-        badge: "bg-gray-100 text-gray-800 border-gray-300",
-        ring: "ring-gray-200",
-        glow: "shadow-gray-200",
-      },
-      Saver: {
-        gradient: "from-blue-500 to-blue-600",
-        badge: "bg-blue-100 text-blue-800 border-blue-300",
-        ring: "ring-blue-200",
-        glow: "shadow-blue-200",
-        popular: true,
-      },
-      Flexi: {
-        gradient: "from-purple-500 to-purple-600",
-        badge: "bg-purple-100 text-purple-800 border-purple-300",
-        ring: "ring-purple-200",
-        glow: "shadow-purple-200",
-        premium: true,
-      },
-      Business: {
-        gradient: "from-amber-500 to-amber-600",
-        badge: "bg-amber-100 text-amber-800 border-amber-300",
-        ring: "ring-amber-200",
-        glow: "shadow-amber-200",
-        luxury: true,
-      },
-    };
-
-    return styles[fare?.fareLabel] || styles["Basic"];
-  };
-
-  const fareStyle = getFareStyle();
-
   return (
-    <div
-      className={cn(
-        "relative rounded-2xl overflow-hidden transition-all duration-500 group ]",
-        isSelected
-          ? `border-3 shadow-2xl scale-[1.03] ${fareStyle.glow} ring-4 ${fareStyle.ring}`
-          : "border-2 border-gray-200 hover:border-gray-300 hover:shadow-xl bg-white"
-      )}
-      onClick={() => onSelect?.()}
-    >
-      {/* Gradient Top Bar */}
-      <div
-        className={cn(
-          "h-2 bg-gradient-to-r",
-          isSelected ? fareStyle.gradient : "from-gray-300 to-gray-400"
-        )}
-      />
-
-      {/* Popular/Premium Badge Ribbon */}
-      {(fareStyle.popular || fareStyle.premium || fareStyle.luxury) && (
-        <div className="absolute top-3 right-3 z-20">
-          <div
-            className={cn(
-              "bg-gradient-to-r text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5",
-              fareStyle.gradient
-            )}
-          >
-            {fareStyle.popular && (
-              <>
-                <Star className="w-3 h-3 fill-white" />
-                POPULAR
-              </>
-            )}
-            {fareStyle.premium && (
-              <>
-                <Sparkles className="w-3 h-3" />
-                FLEXIBLE
-              </>
-            )}
-            {fareStyle.luxury && (
-              <>
-                <Crown className="w-3 h-3 fill-white" />
-                PREMIUM
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="p-5 cursor-pointer bg-gradient-to-br from-white via-gray-50/30 to-white">
-        {/* Header Section */}
-        <div className="flex items-start justify-between mb-5 gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            {/* Premium Selection Radio */}
-            <div
-              className={cn(
-                "mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 shadow-sm flex-shrink-0",
-                isSelected
-                  ? `bg-gradient-to-br ${fareStyle.gradient} border-transparent shadow-lg`
-                  : "border-gray-300 bg-white hover:border-gray-400 group-hover:scale-110"
-              )}
-            >
-              {isSelected && (
-                <Check
-                  className="w-3 h-3 text-white drop-shadow-sm"
-                  strokeWidth={3.5}
-                />
-              )}
-            </div>
-
-            {/* Fare Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <h3
-                  className={cn(
-                    "text-2xl font-black tracking-tight",
-                    isSelected
-                      ? `bg-gradient-to-r ${fareStyle.gradient} bg-clip-text text-transparent`
-                      : "text-gray-900"
-                  )}
-                >
-                  {fare?.fareLabel || fare?.name || "Economy Basic"}
-                </h3>
-
-              </div>
-
-            </div>
-          </div>
-
-          {/* Premium Price Section */}
-          <div className="text-right flex-shrink-0">
-            <div className="flex items-start justify-end gap-0.5 mb-0.5">
-              <span className="text-sm font-semibold text-gray-600 mt-1">
-                $
-              </span>
-              <span
-                className={cn(
-                  "text-3xl font-black tracking-tight leading-tight",
-                  isSelected
-                    ? `bg-gradient-to-r ${fareStyle.gradient} bg-clip-text text-transparent`
-                    : "text-gray-900"
-                )}
-              >
-                {subtotal.toLocaleString(
-                  "en-IN"
-                )}
-              </span>
-            </div>
-            {passengerCount && passengerCount > 1 && (
-              <p className="text-[10px] text-gray-500 font-medium mb-1.5">
-                for {passengerCount} passenger{passengerCount > 1 ? "s" : ""}
-              </p>
-            )}
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full">
-              <DollarSign className="w-2.5 h-2.5 text-gray-600" />
-              <span className="text-[10px] font-semibold text-gray-700">
-                ${pricePerPassenger.toLocaleString("en-IN")}/person
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <Separator className="mb-4" />
-
         <ScrollArea className={"h-[45vh]"}>
           {/* Price Breakdown Collapsible */}
           <Collapsible className="mb-4">
@@ -698,6 +534,179 @@ const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
             </div>
           </div>
         </ScrollArea>
+  );
+});
+
+const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
+
+
+  const { subtotal } = calculateBookingTotals({ fare, passengerCount });
+  const { subtotal: pricePerPassenger } = calculateBookingTotals({ fare });
+
+
+
+  // Get fare label with premium styling
+  const getFareStyle = () => {
+    const styles = {
+      Basic: {
+        gradient: "from-gray-500 to-gray-600",
+        badge: "bg-gray-100 text-gray-800 border-gray-300",
+        ring: "ring-gray-200",
+        glow: "shadow-gray-200",
+      },
+      Saver: {
+        gradient: "from-blue-500 to-blue-600",
+        badge: "bg-blue-100 text-blue-800 border-blue-300",
+        ring: "ring-blue-200",
+        glow: "shadow-blue-200",
+        popular: true,
+      },
+      Flexi: {
+        gradient: "from-purple-500 to-purple-600",
+        badge: "bg-purple-100 text-purple-800 border-purple-300",
+        ring: "ring-purple-200",
+        glow: "shadow-purple-200",
+        premium: true,
+      },
+      Business: {
+        gradient: "from-amber-500 to-amber-600",
+        badge: "bg-amber-100 text-amber-800 border-amber-300",
+        ring: "ring-amber-200",
+        glow: "shadow-amber-200",
+        luxury: true,
+      },
+    };
+
+    return styles[fare?.fareLabel] || styles["Basic"];
+  };
+
+  const fareStyle = getFareStyle();
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-2xl overflow-hidden transition-all duration-500 group ]",
+        isSelected
+          ? `border-3 shadow-2xl scale-[1.03] ${fareStyle.glow} ring-4 ${fareStyle.ring}`
+          : "border-2 border-gray-200 hover:border-gray-300 hover:shadow-xl bg-white"
+      )}
+      onClick={() => onSelect?.(fare)}
+    >
+      {/* Gradient Top Bar */}
+      <div
+        className={cn(
+          "h-2 bg-gradient-to-r",
+          isSelected ? fareStyle.gradient : "from-gray-300 to-gray-400"
+        )}
+      />
+
+      {/* Popular/Premium Badge Ribbon */}
+      {(fareStyle.popular || fareStyle.premium || fareStyle.luxury) && (
+        <div className="absolute top-3 right-3 z-20">
+          <div
+            className={cn(
+              "bg-gradient-to-r text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5",
+              fareStyle.gradient
+            )}
+          >
+            {fareStyle.popular && (
+              <>
+                <Star className="w-3 h-3 fill-white" />
+                POPULAR
+              </>
+            )}
+            {fareStyle.premium && (
+              <>
+                <Sparkles className="w-3 h-3" />
+                FLEXIBLE
+              </>
+            )}
+            {fareStyle.luxury && (
+              <>
+                <Crown className="w-3 h-3 fill-white" />
+                PREMIUM
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="p-5 cursor-pointer bg-gradient-to-br from-white via-gray-50/30 to-white">
+        {/* Header Section */}
+        <div className="flex items-start justify-between mb-5 gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* Premium Selection Radio */}
+            <div
+              className={cn(
+                "mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 shadow-sm flex-shrink-0",
+                isSelected
+                  ? `bg-gradient-to-br ${fareStyle.gradient} border-transparent shadow-lg`
+                  : "border-gray-300 bg-white hover:border-gray-400 group-hover:scale-110"
+              )}
+            >
+              {isSelected && (
+                <Check
+                  className="w-3 h-3 text-white drop-shadow-sm"
+                  strokeWidth={3.5}
+                />
+              )}
+            </div>
+
+            {/* Fare Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <h3
+                  className={cn(
+                    "text-2xl font-black tracking-tight",
+                    isSelected
+                      ? `bg-gradient-to-r ${fareStyle.gradient} bg-clip-text text-transparent`
+                      : "text-gray-900"
+                  )}
+                >
+                  {fare?.fareLabel || fare?.name || "Economy Basic"}
+                </h3>
+
+              </div>
+
+            </div>
+          </div>
+
+          {/* Premium Price Section */}
+          <div className="text-right flex-shrink-0">
+            <div className="flex items-start justify-end gap-0.5 mb-0.5">
+              <span className="text-sm font-semibold text-gray-600 mt-1">
+                $
+              </span>
+              <span
+                className={cn(
+                  "text-3xl font-black tracking-tight leading-tight",
+                  isSelected
+                    ? `bg-gradient-to-r ${fareStyle.gradient} bg-clip-text text-transparent`
+                    : "text-gray-900"
+                )}
+              >
+                {subtotal.toLocaleString(
+                  "en-IN"
+                )}
+              </span>
+            </div>
+            {passengerCount && passengerCount > 1 && (
+              <p className="text-[10px] text-gray-500 font-medium mb-1.5">
+                for {passengerCount} passenger{passengerCount > 1 ? "s" : ""}
+              </p>
+            )}
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full">
+              <DollarSign className="w-2.5 h-2.5 text-gray-600" />
+              <span className="text-[10px] font-semibold text-gray-700">
+                ${pricePerPassenger.toLocaleString("en-IN")}/person
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="mb-4" />
+
+        <FareBenefits fare={fare} passengerCount={passengerCount} />
 
         {/* Validity Period Banner */}
         {fare.validFrom && fare.validTo && (
@@ -723,7 +732,7 @@ const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
               )}
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect?.();
+                onSelect?.(fare);
               }}
             >
               <div className="flex items-center justify-center gap-2">
@@ -766,4 +775,4 @@ const FareCard = ({ fare, isSelected, onSelect, passengerCount = 1 }) => {
   );
 };
 
-export default FareCard;
+export default React.memo(FareCard);

@@ -54,6 +54,17 @@ export async function loadComponent(path, overrides = {}, exportName = 'default'
   Object.assign(bindings.React, {
     useState: bindings.useState, useRef: bindings.useRef, useEffect: bindings.useEffect,
     useId: () => `test-id-${cursor++}`,
+    // This handler harness does not reconcile child components; the browser
+    // performance fixture exercises React's actual memo reconciliation.
+    memo: component => component,
+    useCallback(callback, deps) {
+      const index = cursor++;
+      const previous = slots[index];
+      if (!previous || deps.some((value, i) => !Object.is(value, previous.deps[i]))) {
+        slots[index] = { deps, callback };
+      }
+      return slots[index].callback;
+    },
   });
   const module = { exports: {} };
   const Component = new Function('bindings', 'module', 'exports', 'sessionStorage', 'exportName',

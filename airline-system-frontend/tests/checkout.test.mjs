@@ -172,8 +172,14 @@ test('fare modal waits for cabins, clears selections, shows every fare and ignor
   const cards = findAll(tree, (node) => node.type === 'FareCard');
   assert.equal(cards.length, 4);
   assert.equal(cards[3].props.passengerCount, 3);
-  cards[3].props.onSelect();
-  assert.equal(continueButton(render()).props.disabled, false);
+  assert.ok(cards.every(card => card.props.onSelect === cards[0].props.onSelect));
+  cards[3].props.onSelect(cards[3].props.fare);
+  const selectedTree = render();
+  assert.equal(continueButton(selectedTree).props.disabled, false);
+  const selectedCards = findAll(selectedTree, node => node.type === 'FareCard');
+  assert.equal(selectedCards[3].props.isSelected, true);
+  assert.equal(selectedCards[0].props.isSelected, false);
+  assert.equal(selectedCards[0].props.onSelect, cards[0].props.onSelect);
   findAll(render(), (node) => node.type === 'Tabs')[0].props.onValueChange('1');
   tree = render();
   assert.equal(continueButton(tree).props.disabled, true);
@@ -188,6 +194,17 @@ test('fare modal waits for cabins, clears selections, shows every fare and ignor
   props.flight = { ...flight, id: 6, flightId: 11 };
   assert.equal(findAll(render(), (node) => node.type === 'FareCard').length, 0);
   modal.unmount();
+});
+
+test('fare card and select button pass their fare to the shared selection handler', async () => {
+  const selections = [];
+  const card = await loadComponent('pages/traveler/FlightList/FlightPricing/FareCard.jsx', checkout);
+  const tree = card.render({ fare, onSelect: selected => selections.push(selected), passengerCount: 3 });
+  tree.props.onClick();
+  let stopped = false;
+  findAll(tree, node => node.type === 'Button')[0].props.onClick({ stopPropagation() { stopped = true; } });
+  assert.equal(stopped, true);
+  assert.deepEqual(selections, [fare, fare]);
 });
 
 test('booking review blocks untouched/contact-invalid forms and duplicate submissions', async () => {

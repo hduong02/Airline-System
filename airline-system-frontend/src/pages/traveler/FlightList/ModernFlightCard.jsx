@@ -38,6 +38,22 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FlightPricingModal from "./FlightPricing/FlightPricingModal";
 
+// Reuse locale formatters across cards instead of constructing four per render.
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "2-digit", minute: "2-digit", hour12: false,
+});
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short", day: "numeric",
+});
+const formatTime = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Invalid Date" : timeFormatter.format(date);
+};
+const formatDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Invalid Date" : dateFormatter.format(date);
+};
+
 const ModernFlightCard = ({
   flight,
   cabinClass,
@@ -58,20 +74,6 @@ const ModernFlightCard = ({
 
 
 
-  const formatTime = (timeString) => {
-    return new Date(timeString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
-  const formatDate = (timeString) => {
-    return new Date(timeString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
 
 
 
@@ -842,4 +844,4 @@ const ModernFlightCard = ({
   );
 };
 
-export default ModernFlightCard;
+export default React.memo(ModernFlightCard);

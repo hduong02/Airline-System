@@ -193,7 +193,7 @@ const SearchResults = () => {
   };
 
   // Handler functions
-  const handleBookmark = (flight) => {
+  const handleBookmark = React.useCallback((flight) => {
     setBookmarkedFlights((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(flight.id)) {
@@ -203,7 +203,7 @@ const SearchResults = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
   const clearAllFilters = () => {
     setFilters({
