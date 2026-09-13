@@ -392,11 +392,6 @@ const ModernFlightCard = ({
                 <span className="text-3xl font-bold text-primary">
                   ${fare?.currentPrice?.toLocaleString() || fare?.totalPrice?.toLocaleString()}
                 </span>
-                {fare?.baseFare !== fare?.currentPrice && (
-                  <span className="text-lg text-muted-foreground line-through">
-                    ${fare?.baseFare?.toLocaleString()}
-                  </span>
-                )}
               </div>
               <div className="text-sm text-muted-foreground">per person</div>
               {fare?.name && (

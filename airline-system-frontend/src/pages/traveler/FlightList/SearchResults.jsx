@@ -71,7 +71,7 @@ const SearchResults = () => {
   // Enhanced filters state
   const [filters, setFilters] = React.useState({
     airlines: [],
-    priceRange: { min: 1000, max: 200000 },
+    priceRange: { min: 50, max: 20000 },
     departureTimeRange: "any",
     arrivalTimeRange: "any",
   });
@@ -86,11 +86,11 @@ const SearchResults = () => {
     }
 
     // minPrice / maxPrice — only send when user has moved from default bounds
-    if (currentFilters.priceRange.min > 1000) {
+    if (currentFilters.priceRange.min > 50) {
       params.minPrice = currentFilters.priceRange.min;
     }
 
-    if (currentFilters.priceRange.max < 200000) {
+    if (currentFilters.priceRange.max < 20000) {
       params.maxPrice = currentFilters.priceRange.max;
     }
 
@@ -208,7 +208,7 @@ const SearchResults = () => {
   const clearAllFilters = () => {
     setFilters({
       airlines: [],
-      priceRange: { min: 1000, max: 200000 },
+      priceRange: { min: 50, max: 20000 },
       departureTimeRange: "any",
       arrivalTimeRange: "any",
     });

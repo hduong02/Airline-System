@@ -21,8 +21,8 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const MIN_PRICE = 1000;
-const MAX_PRICE = 200000;
+const MIN_PRICE = 50;
+const MAX_PRICE = 20000;
 
 const formatPrice = (value) =>
   new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
@@ -153,7 +153,7 @@ const FiltersSidebar = ({ filters, onFiltersChange, airlines, className }) => {
               }
               min={MIN_PRICE}
               max={MAX_PRICE}
-              step={500}
+              step={50}
               className="w-full"
             />
 

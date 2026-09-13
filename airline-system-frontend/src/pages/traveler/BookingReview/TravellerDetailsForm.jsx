@@ -337,21 +337,28 @@ const TravellerDetailsForm = ({ passengerCount = 1, onTravellerDataChange }) => 
             </label>
             <div className="flex gap-2">
               <select
+                aria-label="Country calling code"
                 value={contactInfo.countryCode}
                 onChange={(e) => handleContactInfoChange('countryCode', e.target.value)}
-                className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-40 min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               >
-                <option value="+91">+91</option>
-                <option value="+1">+1</option>
-                <option value="+44">+44</option>
-                <option value="+971">+971</option>
+                <option value="+91">India (+91)</option>
+                <option value="+61">Australia (+61)</option>
+                <option value="+33">France (+33)</option>
+                <option value="+81">Japan (+81)</option>
+                <option value="+65">Singapore (+65)</option>
+                <option value="+82">South Korea (+82)</option>
+                <option value="+971">United Arab Emirates (+971)</option>
+                <option value="+44">United Kingdom (+44)</option>
+                <option value="+1">United States (+1)</option>
+                <option value="+84">Vietnam (+84)</option>
               </select>
               <input
                 type="tel"
                 value={contactInfo.phone}
                 onChange={(e) => handleContactInfoChange('phone', e.target.value)}
                 placeholder="Enter mobile number"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="min-w-0 flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">Booking details will be sent via SMS</p>
