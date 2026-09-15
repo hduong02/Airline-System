@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Users, BarChart3 } from "lucide-react";
 import FlightCard from "./FlightManagment/FlightCard";
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardOverview = ({
 
@@ -15,6 +16,7 @@ const DashboardOverview = ({
   setEditingFlight
 }) => {
   const {flights}=useSelector(store=>store.flight)
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
       {/* Quick Analytics Cards */}
@@ -57,7 +59,7 @@ const DashboardOverview = ({
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Flight
               </Button>
-              <Button className="w-full justify-start" variant="outline">
+              <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/airline/bookings')}>
                 <Users className="h-4 w-4 mr-2" />
                 View Bookings
               </Button>

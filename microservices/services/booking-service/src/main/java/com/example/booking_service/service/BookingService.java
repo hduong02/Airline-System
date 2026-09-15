@@ -17,6 +17,8 @@ public interface BookingService {
 
         BookingResponse getBookingById(Long id, Long userId) throws Exception;
 
+        PaymentInitiateResponse resumeCheckout(Long id, Long userId) throws Exception;
+
         List<BookingResponse> getAllBookingsByAirline(
                         Long userId,
                         String searchQuery,

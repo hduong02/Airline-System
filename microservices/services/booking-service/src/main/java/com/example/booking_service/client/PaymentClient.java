@@ -22,7 +22,7 @@ public interface PaymentClient {
     @GetMapping("/api/payments/booking/{bookingId}")
     PaymentDto getPaymentByBookingId(@PathVariable Long bookingId);
 
-    @PostMapping("/api/payments/batch/bookings")
+    @PostMapping("/internal/payments/batch/bookings")
     Map<Long, PaymentDto> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds);
 
     @PostMapping("/internal/payments/booking/{bookingId}/reconcile-expiry")

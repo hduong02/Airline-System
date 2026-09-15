@@ -143,6 +143,23 @@ const BookingSuccess = () => {
     });
   };
 
+  // Fare fields are per passenger; totalAmount includes seats, meals and services.
+  // Calculate in cents so the displayed rows reconcile without floating-point drift.
+  const toCents = (value) => value != null && value !== '' && Number.isFinite(Number(value))
+    ? Math.round(Number(value) * 100) : null;
+  const passengerCount = booking?.totalPassengers > 0
+    ? booking.totalPassengers : booking?.passengers?.length || 1;
+  const fareAmounts = [booking?.fareBaseFare, booking?.fareTaxesAndFees, booking?.fareAirlineFees]
+    .map((value) => {
+      const cents = toCents(value);
+      return cents == null ? null : cents * passengerCount;
+    });
+  const totalCents = toCents(booking?.totalAmount);
+  const addOnsCents = totalCents != null && fareAmounts.every((value) => value != null)
+    ? totalCents - fareAmounts.reduce((sum, value) => sum + value, 0) : null;
+  const formatMoney = (cents) => cents == null ? 'N/A'
+    : `${booking?.currency || '$'} ${(cents / 100).toFixed(2)}`;
+
   const calculateDuration = (departure, arrival) => {
     if (!departure || !arrival) return "N/A";
     const diff = new Date(arrival) - new Date(departure);
@@ -1285,29 +1302,17 @@ const BookingSuccess = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Base Fare</span>
-                    <span className="font-medium">
-                      {booking.currency || "$"}{" "}
-                      {booking.fare?.baseFare?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Taxes & Fees</span>
-                    <span className="font-medium">
-                      {booking.currency || "$"}{" "}
-                      {((booking.totalAmount || 0) - (booking.fare?.baseFare || 0) - (booking.fare?.airlineFees || 0))?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                  {booking.fare?.airlineFees > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Airline Fees</span>
-                      <span className="font-medium">
-                        {booking.currency || "$"}{" "}
-                        {booking.fare?.airlineFees?.toFixed(2)}
-                      </span>
+                  {[
+                    ['Base Fare', fareAmounts[0]],
+                    ['Taxes & Fees', fareAmounts[1]],
+                    ['Airline Fees', fareAmounts[2]],
+                    [addOnsCents < 0 ? 'Other Charges & Adjustments' : 'Add-ons & Services', addOnsCents],
+                  ].map(([label, cents]) => (
+                    <div key={label} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">{label}</span>
+                      <span className="font-medium">{formatMoney(cents)}</span>
                     </div>
-                  )}
+                  ))}
                 </div>
 
                 <Separator />
@@ -1315,8 +1320,7 @@ const BookingSuccess = () => {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Total Amount</span>
                   <span className="text-green-600">
-                    {booking.currency || "$"}{" "}
-                    {booking.totalAmount?.toFixed(2) || "0.00"}
+                    {formatMoney(totalCents)}
                   </span>
                 </div>
 

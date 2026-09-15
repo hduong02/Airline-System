@@ -67,9 +67,9 @@ export async function loadComponent(path, overrides = {}, exportName = 'default'
     },
   });
   const module = { exports: {} };
-  const Component = new Function('bindings', 'module', 'exports', 'sessionStorage', 'exportName',
+  const Component = new Function('bindings', 'module', 'exports', 'sessionStorage', 'exportName', 'window',
     `const { ${names.join(', ')} } = bindings;\n${code}\nreturn module.exports[exportName];`)(
-    bindings, module, module.exports, overrides.sessionStorage, exportName,
+    bindings, module, module.exports, overrides.sessionStorage, exportName, overrides.window ?? globalThis.window,
   );
   return {
     render(props = {}) { cursor = 0; return Component(props); },

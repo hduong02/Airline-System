@@ -295,6 +295,19 @@ services:
   user-service:
     image: "andyy02/user-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: user-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5001;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -319,6 +332,19 @@ services:
   airline-service:
     image: "andyy02/airline-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: airline-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5002;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -346,6 +372,19 @@ services:
   flight-service:
     image: "andyy02/flight-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: flight-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5005;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -376,6 +415,19 @@ services:
   location-service:
     image: "andyy02/location-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: location-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5004;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -403,6 +455,19 @@ services:
   seat-service:
     image: "andyy02/seat-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: seat-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5007;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -429,6 +494,19 @@ services:
   pricing-service:
     image: "andyy02/pricing-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: pricing-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5006;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -456,6 +534,19 @@ services:
   ancillary-service:
     image: "andyy02/ancillary-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: ancillary-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5008;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -479,6 +570,19 @@ services:
   booking-service:
     image: "andyy02/booking-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: booking-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5009;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -505,6 +609,19 @@ services:
   payment-service:
     image: "andyy02/payment-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: payment-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5010;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5
@@ -542,6 +659,19 @@ services:
   notification-service:
     image: "andyy02/notification-service:${AIRLINE_IMAGE_TAG:?Set AIRLINE_IMAGE_TAG to the built deployment version}"
     container_name: notification-service
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5011;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     mem_limit: 512m
     mem_reservation: 256m
     cpus: 0.5

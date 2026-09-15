@@ -12,11 +12,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/internal/payments")
 @RequiredArgsConstructor
 public class InternalPaymentController {
     private final PaymentService paymentService;
+
+    @PostMapping("/batch/bookings")
+    public Map<Long, PaymentDto> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds) {
+        return paymentService.getPaymentsByBookingIds(bookingIds);
+    }
 
     @PostMapping("/initiate")
     public PaymentInitiateResponse initiatePayment(@Valid @RequestBody PaymentInitiateRequest request)

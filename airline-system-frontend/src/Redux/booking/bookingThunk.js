@@ -41,6 +41,19 @@ export const createBooking = createAsyncThunk(
   }
 );
 
+// Retrieve the existing checkout without creating another booking.
+export const resumeBookingPayment = createAsyncThunk(
+  'booking/resumePayment',
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await api.post(`${API_URL}/${id}/checkout`, null, { headers: getHeaders() });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Unable to resume payment. Please try again.');
+    }
+  }
+);
+
 // ---------- UPDATE ----------
 export const updateBooking = createAsyncThunk(
   "booking/update",

@@ -180,6 +180,13 @@ public class RouteConfig {
                         HandlerFunctions.http())
                 .filter(LoadBalancerFilterFunctions.lb("payment-service"))
                 .before(this::jwtAuthFilter)
+                .before(request -> {
+                    if (RequestPredicates.GET("/api/payments")
+                            .or(RequestPredicates.GET("/api/payments/")).test(request)) {
+                        return requireRole(request, UserRole.ROLE_SYSTEM_ADMIN.toString());
+                    }
+                    return request;
+                })
                 .build();
     }
 

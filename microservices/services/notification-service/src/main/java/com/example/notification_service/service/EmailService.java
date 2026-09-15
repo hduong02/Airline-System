@@ -64,7 +64,7 @@ public class EmailService {
     private String buildHtmlBody(BookingConfirmedEvent booking) {
         Context context = new Context(Locale.ENGLISH);
 
-        context.setVariable("event", booking);
+        context.setVariable("booking", booking);
         context.setVariable("passengerCount",
                 booking.getPassengers() != null ? booking.getPassengers().size() : 1);
 

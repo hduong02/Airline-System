@@ -50,6 +50,31 @@ async function resultComponent(booking, query = '', verify = async () => ({ book
   return { component, calls, tree: component.render() };
 }
 
+for (const [name, amounts, expected] of [
+  ['smoke fixture', { totalPassengers: 1, fareBaseFare: 20, fareTaxesAndFees: 2, fareAirlineFees: 1, totalAmount: 26 },
+    { 'Base Fare': '$ 20.00', 'Taxes & Fees': '$ 2.00', 'Airline Fees': '$ 1.00', 'Add-ons & Services': '$ 3.00', 'Total Amount': '$ 26.00' }],
+  ['multiple passengers', { totalPassengers: 3, fareBaseFare: 20, fareTaxesAndFees: 2, fareAirlineFees: 1, totalAmount: 78 },
+    { 'Base Fare': '$ 60.00', 'Taxes & Fees': '$ 6.00', 'Airline Fees': '$ 3.00', 'Add-ons & Services': '$ 9.00', 'Total Amount': '$ 78.00' }],
+  ['zero fees', { totalPassengers: 1, fareBaseFare: 20, fareTaxesAndFees: 0, fareAirlineFees: 0, totalAmount: 20 },
+    { 'Base Fare': '$ 20.00', 'Taxes & Fees': '$ 0.00', 'Airline Fees': '$ 0.00', 'Add-ons & Services': '$ 0.00', 'Total Amount': '$ 20.00' }],
+  ['missing fare', { totalPassengers: 1, fareBaseFare: null, fareTaxesAndFees: null, fareAirlineFees: null, totalAmount: 26 },
+    { 'Base Fare': 'N/A', 'Taxes & Fees': 'N/A', 'Airline Fees': 'N/A', 'Add-ons & Services': 'N/A', 'Total Amount': '$ 26.00' }],
+  ['decimal prices', { totalPassengers: 2, fareBaseFare: 10.1, fareTaxesAndFees: 0.2, fareAirlineFees: 0.1, totalAmount: 20.8 },
+    { 'Base Fare': '$ 20.20', 'Taxes & Fees': '$ 0.40', 'Airline Fees': '$ 0.20', 'Add-ons & Services': '$ 0.00', 'Total Amount': '$ 20.80' }],
+]) {
+  test(`success summary uses flattened booking fare fields: ${name}`, async () => {
+    const { component, tree } = await resultComponent({ ...fixture('CONFIRMED', 'SUCCESS'), ...amounts });
+    try {
+      for (const [label, value] of Object.entries(expected)) {
+        const row = findAll(tree, (node) => node.type === 'div' &&
+          node.props.children.flat().some((child) => child?.type === 'span' && textOf(child) === label))[0];
+        assert.ok(row, `Missing ${label} row`);
+        assert.equal(textOf(row).replace(/\s+/g, ' ').trim(), `${label} ${value}`);
+      }
+    } finally { component.unmount(); }
+  });
+}
+
 for (const [status, paymentStatus, title] of [
   ['PENDING', 'PENDING', 'Booking pending'], ['CANCELLED', 'SUCCESS', 'Booking cancelled'],
   ['PENDING', 'FAILED', 'Payment failed'], ['PENDING', 'CANCELLED', 'Payment cancelled'],
@@ -189,6 +214,7 @@ test('history download invokes the imported ticket generator with its booking', 
   const booking = fixture('CONFIRMED', 'SUCCESS');
   let downloaded;
   const component = await loadComponent('pages/traveler/BookingHistory/TravellerBookingCard.jsx', {
+    useDispatch: () => () => {},
     generateTicketPDF: async (value) => { downloaded = value; return { fileName: 'test.pdf' }; },
   });
   const button = findAll(component.render({ booking }), (node) => node.type === 'Button' &&
@@ -203,7 +229,9 @@ test('history download invokes the imported ticket generator with its booking', 
 });
 
 test('booking history never formats missing flight dates as January 1 or null flight labels', async () => {
-  const component = await loadComponent('pages/traveler/BookingHistory/TravellerBookingCard.jsx');
+  const component = await loadComponent('pages/traveler/BookingHistory/TravellerBookingCard.jsx', {
+    useDispatch: () => () => {},
+  });
   const booking = { ...fixture('PENDING', 'PENDING'), flightName: null, flightNumber: null,
     departureTime: null, arrivalTime: null, bookingDate: null };
   const text = textOf(component.render({ booking }));

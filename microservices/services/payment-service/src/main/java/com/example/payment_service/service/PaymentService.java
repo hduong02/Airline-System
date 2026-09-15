@@ -21,7 +21,10 @@ public interface PaymentService {
 
     PaymentDto reconcileExpiredCheckout(Long bookingId) throws Exception;
 
-    Page<PaymentDto> getAllPayments(Pageable pageable);
+    Page<PaymentDto> getAllPayments(Pageable pageable, String roles);
 
+    Map<Long, PaymentDto> getPaymentsByBookingIdsForUser(List<Long> bookingIds, Long userId);
+
+    // Trusted internal booking enrichment only; public callers must use the user-scoped lookup.
     Map<Long, PaymentDto> getPaymentsByBookingIds(List<Long> bookingIds);
 }

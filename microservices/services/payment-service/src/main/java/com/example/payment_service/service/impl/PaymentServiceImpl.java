@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.enums.PaymentStatus;
+import com.example.enums.UserRole;
 import com.example.payload.dto.PaymentDto;
 import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.request.PaymentVerifyRequest;
@@ -27,6 +28,7 @@ import com.example.payment_service.service.gateway.StripeService;
 import com.example.payment_service.service.gateway.StripeService.CheckoutOutcome;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -183,9 +185,25 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentDto> getAllPayments(Pageable pageable) {
+    public Page<PaymentDto> getAllPayments(Pageable pageable, String roles) {
+        if (roles == null || Arrays.stream(roles.split(",")).map(String::trim)
+                .noneMatch(UserRole.ROLE_SYSTEM_ADMIN.name()::equals)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "System admin role is required");
+        }
         return paymentRepository.findAll(pageable)
                 .map(PaymentMapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, PaymentDto> getPaymentsByBookingIdsForUser(List<Long> bookingIds, Long userId) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authenticated user is required");
+        }
+        if (bookingIds == null || bookingIds.isEmpty())
+            return Map.of();
+        return paymentRepository.findByBookingIdInAndUserId(bookingIds, userId).stream()
+                .collect(Collectors.toMap(Payment::getBookingId, PaymentMapper::toDto));
     }
 
     @Override

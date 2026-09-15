@@ -54,3 +54,12 @@ server:
   port: 5011
 
 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

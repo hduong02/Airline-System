@@ -13,6 +13,13 @@
 	<artifactId>services</artifactId>
 	<packaging>pom</packaging>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
 	<name>Business Services</name>
 	<description>Aggregator for all business microservices (user, flight, booking, etc..)</description>
 

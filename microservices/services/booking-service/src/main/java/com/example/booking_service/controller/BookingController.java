@@ -32,6 +32,13 @@ public class BookingController {
     }
 
 
+    @PostMapping("/{id}/checkout")
+    public ResponseEntity<PaymentInitiateResponse> resumeCheckout(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) throws Exception {
+        return ResponseEntity.ok(bookingService.resumeCheckout(id, userId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(
             @PathVariable Long id,

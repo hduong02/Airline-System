@@ -37,9 +37,10 @@ public class PaymentController {
 
     @PostMapping("/batch/bookings")
     public ResponseEntity<Map<Long, PaymentDto>> getPaymentsByBookingIds(
-            @RequestBody List<Long> bookingIds) {
+            @RequestBody List<Long> bookingIds,
+            @RequestHeader("X-User-Id") Long userId) {
         return ResponseEntity.ok(paymentService
-                .getPaymentsByBookingIds(bookingIds));
+                .getPaymentsByBookingIdsForUser(bookingIds, userId));
     }
 
     @GetMapping
@@ -48,11 +49,12 @@ public class PaymentController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(value = "X-User-Roles", required = false) String roles) {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        Page<PaymentDto> payments = paymentService.getAllPayments(pageable);
+        Page<PaymentDto> payments = paymentService.getAllPayments(pageable, roles);
         return ResponseEntity.ok(payments);
     }
 }

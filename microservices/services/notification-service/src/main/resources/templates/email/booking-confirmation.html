@@ -264,9 +264,9 @@
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Free Date Change</p>
                   <p th:if="${booking.fullRefund}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Full Refund</p>
-                  <p th:if="${!booking.fullRefund and booking.partialRefund}"
+                  <p th:if="${booking.fullRefund != true and booking.partialRefund == true}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Partial Refund</p>
-                  <p th:if="${!booking.fullRefund and !booking.partialRefund}"
+                  <p th:if="${booking.fullRefund != true and booking.partialRefund != true}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Non-Refundable</p>
                   <p th:if="${booking.flexibleTicket}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Flexible Ticket</p>
@@ -394,10 +394,10 @@
               <li>Carry a valid government-issued photo ID / passport at all times</li>
               <li>Ensure your name on this booking matches your ID / passport exactly</li>
               <li th:if="${booking.freeDateChange}">&#10003; You can change your travel date free of charge</li>
-              <li th:if="${booking.fullRefund or booking.partialRefund}">
+              <li th:if="${booking.fullRefund == true or booking.partialRefund == true}">
                 Refund applicable — visit Manage Booking on our website
               </li>
-              <li th:unless="${booking.fullRefund or booking.partialRefund}">
+              <li th:unless="${booking.fullRefund == true or booking.partialRefund == true}">
                 This ticket is <strong>non-refundable</strong>; cancellation fees may apply
               </li>
             </ul>

@@ -1,4 +1,6 @@
 import React from 'react'
+import { useDispatch } from 'react-redux'
+import { resumeBookingPayment } from '@/Redux/booking/bookingThunk'
 import { generateTicketPDF } from '../Ticket/TicketPDF'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,6 +38,29 @@ import {
 const TravellerBookingCard = ({ booking, navigate }) => {
   const [showDetails, setShowDetails] = React.useState(false)
   const [downloadingPDF, setDownloadingPDF] = React.useState(false)
+  const dispatch = useDispatch()
+  const [resumingPayment, setResumingPayment] = React.useState(false)
+  const [paymentError, setPaymentError] = React.useState(null)
+  const paymentInFlight = React.useRef(false)
+  const canCompletePayment = ['pending', 'pending_payment'].includes(booking.status?.toLowerCase()) &&
+    booking.paymentStatus?.toLowerCase() === 'pending'
+
+  const handleCompletePayment = async () => {
+    if (!canCompletePayment || paymentInFlight.current) return
+    paymentInFlight.current = true
+    setResumingPayment(true)
+    setPaymentError(null)
+    try {
+      const result = await dispatch(resumeBookingPayment(booking.id)).unwrap()
+      if (!result?.success || !result.checkoutUrl) throw new Error('Checkout is unavailable. Please refresh your bookings and try again.')
+      window.location.assign(result.checkoutUrl)
+    } catch (error) {
+      setPaymentError(error?.message || String(error || 'Unable to resume payment. Please try again.'))
+    } finally {
+      paymentInFlight.current = false
+      setResumingPayment(false)
+    }
+  }
 
   const formatDate = (dateString) => {
     if (!dateString || Number.isNaN(new Date(dateString).getTime())) return 'N/A'
@@ -448,15 +473,19 @@ const TravellerBookingCard = ({ booking, navigate }) => {
               )}
 
               {/* Complete Payment Button - for pending bookings */}
-              {(booking.paymentStatus?.toLowerCase() === "pending") && (
+              {canCompletePayment && (
                 <Button
                   size="sm"
+                  onClick={handleCompletePayment}
+                  disabled={resumingPayment}
                   className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                 >
                   <CreditCard className="h-4 w-4 mr-1.5" />
-                  Complete Payment
+                  {resumingPayment ? 'Opening Checkout...' : 'Complete Payment'}
                 </Button>
               )}
+
+              {paymentError && <p role="alert" className="text-sm text-red-600">{paymentError}</p>}
 
               {/* Past Booking Actions */}
               {booking.isPast && booking.status?.toLowerCase() === "completed" && (

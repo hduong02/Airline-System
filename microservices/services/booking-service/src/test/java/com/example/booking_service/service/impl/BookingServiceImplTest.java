@@ -68,6 +68,68 @@ class BookingServiceImplTest {
             applicationEventPublisher);
 
     @Test
+    void resumeCheckoutUsesExistingPaymentAmountAndGateway() throws Exception {
+        Booking booking = Booking.builder().id(7L).userId(1L).bookingReference("BK7")
+                .status(BookingStatus.PENDING).holdExpiresAt(Instant.now().plusSeconds(600)).build();
+        when(bookingRepository.findByIdAndUserId(7L, 1L)).thenReturn(Optional.of(booking));
+        PaymentDto payment = new PaymentDto();
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setAmount(26.0);
+        payment.setGateway(com.example.enums.PaymentGateway.STRIPE);
+        when(paymentClient.getPaymentsByBookingIds(List.of(7L))).thenReturn(Map.of(7L, payment));
+        var response = com.example.payload.response.PaymentInitiateResponse.builder()
+                .success(true).checkoutUrl("https://checkout.stripe.com/existing").build();
+        when(paymentClient.initiatePayment(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(1L))).thenReturn(response);
+
+        assertEquals(response, bookingService.resumeCheckout(7L, 1L));
+        var request = org.mockito.ArgumentCaptor.forClass(com.example.payload.request.PaymentInitiateRequest.class);
+        verify(paymentClient).initiatePayment(request.capture(), org.mockito.ArgumentMatchers.eq(1L));
+        assertEquals(7L, request.getValue().getBookingId());
+        assertEquals(1L, request.getValue().getUserId());
+        assertEquals(26.0, request.getValue().getAmount());
+        assertEquals(com.example.enums.PaymentGateway.STRIPE, request.getValue().getGateway());
+        verifyNoInteractions(seatClient, passengerService, ticketService);
+    }
+
+    @Test
+    void resumeCheckoutRejectsForeignBookingBeforeCallingPaymentService() {
+        when(bookingRepository.findByIdAndUserId(7L, 2L)).thenReturn(Optional.empty());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class,
+                () -> bookingService.resumeCheckout(7L, 2L)).getStatusCode());
+        verifyNoInteractions(paymentClient);
+    }
+
+    @Test
+    void resumeCheckoutRejectsCancelledAndExpiredBookings() {
+        Booking booking = Booking.builder().id(7L).status(BookingStatus.CANCELLED)
+                .holdExpiresAt(Instant.now().plusSeconds(600)).build();
+        when(bookingRepository.findByIdAndUserId(7L, 1L)).thenReturn(Optional.of(booking));
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> bookingService.resumeCheckout(7L, 1L)).getStatusCode());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setHoldExpiresAt(Instant.now().minusSeconds(1));
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> bookingService.resumeCheckout(7L, 1L)).getStatusCode());
+        verifyNoInteractions(paymentClient);
+    }
+
+    @Test
+    void resumeCheckoutRejectsSettledOrMissingPayment() {
+        Booking booking = Booking.builder().id(7L).status(BookingStatus.PENDING)
+                .holdExpiresAt(Instant.now().plusSeconds(600)).build();
+        when(bookingRepository.findByIdAndUserId(7L, 1L)).thenReturn(Optional.of(booking));
+        PaymentDto payment = new PaymentDto();
+        payment.setStatus(PaymentStatus.SUCCESS);
+        when(paymentClient.getPaymentsByBookingIds(List.of(7L))).thenReturn(Map.of(7L, payment));
+        assertThrows(ResponseStatusException.class, () -> bookingService.resumeCheckout(7L, 1L));
+        when(paymentClient.getPaymentsByBookingIds(List.of(7L))).thenReturn(Map.of());
+        assertThrows(ResponseStatusException.class, () -> bookingService.resumeCheckout(7L, 1L));
+        verify(paymentClient, never()).initiatePayment(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void createBookingLeavesTicketsUnissuedWhilePaymentIsPending() throws Exception {
         BookingRequest request = bookingRequest(100L);
         request.setAncillaryIds(List.of());

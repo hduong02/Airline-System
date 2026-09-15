@@ -165,6 +165,26 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public PaymentInitiateResponse resumeCheckout(Long id, Long userId) throws Exception {
+        Booking booking = findOwnedBooking(id, userId);
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking is no longer pending");
+        }
+        if (booking.getHoldExpiresAt() == null || !booking.getHoldExpiresAt().isAfter(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking hold has expired");
+        }
+        PaymentDto payment = paymentClient.getPaymentsByBookingIds(List.of(id)).get(id);
+        if (payment == null || payment.getStatus() != com.example.enums.PaymentStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment is no longer pending");
+        }
+        return paymentClient.initiatePayment(PaymentInitiateRequest.builder()
+                .userId(userId).bookingId(id).amount(payment.getAmount()).gateway(payment.getGateway())
+                .description("Payment for booking reference: " + booking.getBookingReference())
+                .build(), userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BookingResponse getBookingById(Long id, Long userId) throws Exception {
         Booking booking = findOwnedBooking(id, userId);
         return convertToBookingResponse(booking);
