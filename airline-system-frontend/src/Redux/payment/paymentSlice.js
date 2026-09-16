@@ -5,6 +5,7 @@ import {
  
   
   getAllPayments,
+  getAirlinePayments,
   
  
 
@@ -12,6 +13,10 @@ import {
 } from "./paymentThunk";
 
 const initialState = {
+  airlineTransactions: null,
+  airlineTransactionsLoading: false,
+  airlineTransactionsError: null,
+  airlineTransactionsRequestId: null,
   payment: null,                    // Current payment object
   payments: [],                     // List of payments (for admin)
   paymentsByBooking: {},           // Map of booking ID to payment
@@ -52,6 +57,23 @@ const paymentSlice = createSlice({
     }
   },
   extraReducers: (builder) => {
+    builder.addCase(getAirlinePayments.pending, (state, action) => {
+      state.airlineTransactionsLoading = true;
+      state.airlineTransactionsError = null;
+      state.airlineTransactionsRequestId = action.meta.requestId;
+    });
+    builder.addCase(getAirlinePayments.fulfilled, (state, action) => {
+      if (state.airlineTransactionsRequestId !== action.meta.requestId) return;
+      state.airlineTransactionsLoading = false;
+      state.airlineTransactions = action.payload;
+      state.airlineTransactionsRequestId = null;
+    });
+    builder.addCase(getAirlinePayments.rejected, (state, action) => {
+      if (state.airlineTransactionsRequestId !== action.meta.requestId) return;
+      state.airlineTransactionsLoading = false;
+      state.airlineTransactionsRequestId = null;
+      if (!action.meta.aborted) state.airlineTransactionsError = action.payload || 'Failed to fetch airline transactions';
+    });
 
  
 

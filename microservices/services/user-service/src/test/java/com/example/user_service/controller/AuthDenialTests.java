@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 class AuthDenialTests {
     private final UserRepository users = mock(UserRepository.class);
@@ -37,7 +38,8 @@ class AuthDenialTests {
         user.setRole(UserRole.ROLE_USER);
         when(users.findByEmail(user.getEmail())).thenReturn(user);
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(new AuthServiceImpl(
-                users, passwords, jwt, new CustomUserDetailsService(users)))).build();
+                users, passwords, jwt, new CustomUserDetailsService(users))))
+                .setControllerAdvice(new AuthExceptionHandler()).build();
     }
 
     @AfterEach
@@ -91,17 +93,36 @@ class AuthDenialTests {
     }
 
     @Test
-    void unexpectedDatabaseFailureIsNotConvertedToCredentialDenial() {
+    void malformedLoginRemainsBadRequestWithoutParserDetails() throws Exception {
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{invalid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid authentication request"))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
+        verifyNoInteractions(jwt, passwords);
+    }
+
+    @Test
+    void unexpectedDatabaseFailureReturnsSafeServerError() throws Exception {
         when(users.findByEmail(user.getEmail())).thenThrow(new IllegalStateException("database unavailable"));
-        Exception failure = assertThrows(Exception.class,
-                () -> login(user.getEmail(), "test-password", 401));
-        assertInstanceOf(IllegalStateException.class, failure.getCause());
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"traveler@example.test\",\"password\":\"test-password\"}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Unable to process authentication request"))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
         verifyNoInteractions(jwt, passwords);
     }
 
     private void login(String email, String password, int expectedStatus) throws Exception {
-        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+        var result = mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"))
                 .andExpect(status().is(expectedStatus));
+        if (expectedStatus == 401) {
+            result.andExpect(jsonPath("$.message").value("Invalid email or password"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
     }
 }

@@ -4,6 +4,13 @@ spring:
     
   config:
     import: optional:configserver:http://localhost:8888
+server:
+  error:
+    include-stacktrace: never
+    include-exception: false
+    include-message: never
+    include-binding-errors: never
+
 management:
   endpoints:
     web:

@@ -33,8 +33,7 @@ import {
 
 const RoutePerformancePage = () => {
   const dispatch = useDispatch();
-  const { routePerformance, routePerformanceLoading } = useSelector((store) => store.booking);
-  const [selectedMetric, setSelectedMetric] = useState("bookings");
+  const { routePerformance, routePerformanceLoading, routePerformanceError } = useSelector((store) => store.booking);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
@@ -52,7 +51,11 @@ const RoutePerformancePage = () => {
     );
   }
 
-  if (!routePerformance) {
+  if (routePerformanceError) {
+    return <div role="alert" className="p-6 text-red-700">Error loading route analytics: {routePerformanceError}</div>;
+  }
+
+  if (!routePerformance || routePerformance.totalRoutes === 0) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center space-y-4">
@@ -77,22 +80,7 @@ const RoutePerformancePage = () => {
   };
 
   // Calculate summary statistics
-  const totalRoutes = new Set([
-    ...routePerformance.topRoutesByBookings.map(r => r.route),
-    ...routePerformance.topRoutesByRevenue.map(r => r.route)
-  ]).size;
-
-  const totalBookings = routePerformance.topRoutesByBookings.reduce(
-    (sum, route) => sum + (route.totalBookings || 0),
-    0
-  );
-
-  const totalRevenue = routePerformance.topRoutesByRevenue.reduce(
-    (sum, route) => sum + (route.totalRevenue || 0),
-    0
-  );
-
-  const avgRevenuePerRoute = totalRoutes > 0 ? totalRevenue / totalRoutes : 0;
+  const { totalRoutes, totalBookings, totalRevenue, averageRevenuePerRoute: avgRevenuePerRoute } = routePerformance;
 
   // Chart colors
   const COLORS = [
@@ -202,8 +190,9 @@ const RoutePerformancePage = () => {
           <p className="text-muted-foreground mt-1">
             Analyze your most profitable and popular routes
           </p>
+          <p className="text-sm text-muted-foreground">Bookings from {routePerformance.startDate} through {routePerformance.endDate} (UTC)</p>
         </div>
-        <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+        <Select value={activeTab === 'overview' ? 'bookings' : activeTab} onValueChange={setActiveTab}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select metric" />
           </SelectTrigger>
@@ -219,13 +208,13 @@ const RoutePerformancePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Routes</CardTitle>
+            <CardTitle className="text-sm font-medium">Routes with Bookings</CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalRoutes}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Top performing routes
+              Across the reporting period
             </p>
           </CardContent>
         </Card>
@@ -238,7 +227,7 @@ const RoutePerformancePage = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(totalBookings)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Across all top routes
+              Across all routes
             </p>
           </CardContent>
         </Card>
@@ -251,7 +240,7 @@ const RoutePerformancePage = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              From top routes
+              From all routes
             </p>
           </CardContent>
         </Card>
@@ -272,10 +261,11 @@ const RoutePerformancePage = () => {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="bookings">Top by Bookings</TabsTrigger>
           <TabsTrigger value="revenue">Top by Revenue</TabsTrigger>
+          <TabsTrigger value="average">Top by Avg Revenue</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -381,7 +371,7 @@ const RoutePerformancePage = () => {
                 Top Routes by Number of Bookings
               </CardTitle>
               <CardDescription>
-                Routes ranked by total passenger bookings
+                Routes ranked by total booking records
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -419,6 +409,21 @@ const RoutePerformancePage = () => {
                 ) : (
                   <p className="text-center text-muted-foreground py-8">No revenue data available</p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="average" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Routes by Average Revenue per Booking</CardTitle>
+              <CardDescription>Successful payment revenue divided by all booking records</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {routePerformance.topRoutesByAverageRevenue.map((route, index) => (
+                  <RouteCard key={`average-${index}`} route={route} index={index} />
+                ))}
               </div>
             </CardContent>
           </Card>

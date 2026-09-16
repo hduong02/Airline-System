@@ -8,7 +8,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { TrendingUp, DollarSign, Calendar, BarChart3 } from "lucide-react";
-import RoutePerformance from "../RoutePerformance";
 import { getBookingStatisticsForAirline } from "@/Redux/booking/bookingThunk";
 import {
   ChartContainer,
@@ -60,7 +59,7 @@ const BookingStatisticsOverview = () => {
   }
 
   if (!statistics) {
-    return null;
+    return <p className="p-6 text-muted-foreground">Booking statistics are not available.</p>;
   }
 
   return (
@@ -161,8 +160,6 @@ const BookingStatisticsOverview = () => {
 
         {/* Monthly Revenue Chart */}
         <MonthlyRevenueChart />
-        {/* Route Performance Section */}
-        <RoutePerformance />
       </div>
     </div>
   );

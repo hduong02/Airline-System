@@ -520,7 +520,9 @@ const FlightDetail = () => {
                             {cabinClass.description}
                           </div>
                           <div className="text-xs text-blue-600 mt-1">
-                            Capacity: {cabinClass.capacity || 0} seats
+                            Capacity: {cabinClass.seatMap?.totalSeats != null
+                              ? `${cabinClass.seatMap.totalSeats} seats`
+                              : "Not available"}
                           </div>
                         </div>
                       ))}

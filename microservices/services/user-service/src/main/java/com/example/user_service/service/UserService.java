@@ -1,6 +1,7 @@
 package com.example.user_service.service;
 
-import java.util.List;
+import com.example.enums.UserRole;
+import org.springframework.data.domain.Page;
 
 import com.example.user_service.model.User;
 
@@ -10,5 +11,5 @@ public interface UserService {
 
     User getUserById(Long id) throws Exception;
 
-    List<User> getUsers() throws Exception;
+    Page<User> getUsers(int page, int size, String search, UserRole role, String sortBy, String direction);
 }

@@ -16,7 +16,7 @@ export const ROUTE_MAP = {
   "airlines-pending": "/super-admin/airlines?filter=pending",
   "airlines-suspended": "/super-admin/airlines?filter=suspended",
   "airlines-compliance": "/super-admin/airlines?tab=compliance",
-  "airlines-commission": "/super-admin/airlines?tab=commission",
+  "airlines-commission": "/super-admin/airlines/commission",
 
   // Airports & Cities
   "airports-list": "/super-admin/airports",
@@ -253,6 +253,7 @@ export const getActiveSectionFromPath = (pathname, urlParams = null) => {
 
   // Path section mapping with parameter-based sub-section detection
   const pathSectionMap = {
+    "/airlines/commission": () => "airlines-commission",
     "/airlines": () => {
       const filter = params.get("filter");
       const tab = params.get("tab");

@@ -7,7 +7,7 @@ import { getRoutePerformanceForAirline } from '@/Redux/booking/bookingThunk';
 
 const RoutePerformance = () => {
   const dispatch = useDispatch();
-  const { routePerformance, routePerformanceLoading } = useSelector((store) => store.booking);
+  const { routePerformance, routePerformanceLoading, routePerformanceError } = useSelector((store) => store.booking);
 
   useEffect(() => {
     // Only fetch if we don't have data yet and we're not currently loading
@@ -37,6 +37,10 @@ const RoutePerformance = () => {
         </Card>
       </div>
     );
+  }
+
+  if (routePerformanceError) {
+    return <p role="alert" className="text-red-700">Error loading route analytics: {routePerformanceError}</p>;
   }
 
   if (!routePerformance) {

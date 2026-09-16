@@ -28,9 +28,16 @@ import {
 
 const initialState = {
   bookings: [],
+  // Preserve the complete owner list when the booking table applies filters.
+  ownerBookings: [],
+  ownerBookingsStatus: 'idle',
+  ownerBookingsRequestId: null,
+  statisticsStatus: 'idle',
+  statisticsRequestId: null,
   booking: null,
   statistics: null,
   routePerformance: null,
+  routePerformanceError: null,
   airportPerformance: null,
   superAdminAirportPerformance: null,
   superAdminAirportPerformanceLoading: false,
@@ -147,6 +154,7 @@ const bookingSlice = createSlice({
       console.log("✅ deleteBooking fulfilled");
       state.loading = false;
       state.bookings = state.bookings.filter((b) => b.id !== action.payload);
+      state.ownerBookings = state.ownerBookings.filter((b) => b.id !== action.payload);
       if (state.booking?.id === action.payload) state.booking = null;
     });
     builder.addCase(deleteBooking.rejected, (state, action) => {
@@ -156,18 +164,32 @@ const bookingSlice = createSlice({
     });
 
     // ---------- GET BY AIRLINE ----------
-    builder.addCase(getBookingsByAirline.pending, (state) => {
+    builder.addCase(getBookingsByAirline.pending, (state, action) => {
+      const filters = action.meta.arg || {};
+      if (!filters.search && (!filters.status || filters.status === 'all') && !filters.flightInstanceId) {
+        state.ownerBookingsStatus = 'loading';
+        state.ownerBookingsRequestId = action.meta.requestId;
+      }
       console.log("⏳ getBookingsByAirline pending");
       state.loading = true;
       state.error = null;
     });
     builder.addCase(getBookingsByAirline.fulfilled, (state, action) => {
+      if (state.ownerBookingsRequestId === action.meta.requestId) {
+        state.ownerBookings = action.payload;
+        state.ownerBookingsStatus = 'succeeded';
+        state.ownerBookingsRequestId = null;
+      }
       console.log("✅ getBookingsByAirline fulfilled");
       state.loading = false;
       state.bookings = action.payload;
       state.error = null;
     });
     builder.addCase(getBookingsByAirline.rejected, (state, action) => {
+      if (state.ownerBookingsRequestId === action.meta.requestId) {
+        state.ownerBookingsStatus = 'failed';
+        state.ownerBookingsRequestId = null;
+      }
       console.log("❌ getBookingsByAirline rejected:", action.payload);
       state.loading = false;
       state.error = action.payload;
@@ -228,22 +250,31 @@ const bookingSlice = createSlice({
 
     // ---------- GET BOOKING STATISTICS FOR AIRLINE ----------
     builder
-      .addCase(getBookingStatisticsForAirline.pending, (state) => {
+      .addCase(getBookingStatisticsForAirline.pending, (state, action) => {
+        state.statisticsStatus = 'loading';
+        state.statisticsRequestId = action.meta.requestId;
         console.log("⏳ getBookingStatisticsForAirline pending");
         state.loading = true;
         state.error = null;
       })
       .addCase(getBookingStatisticsForAirline.fulfilled, (state, action) => {
+        if (state.statisticsRequestId !== action.meta.requestId) return;
+        state.statisticsStatus = 'succeeded';
+        state.statisticsRequestId = null;
         console.log("✅ getBookingStatisticsForAirline fulfilled");
         state.loading = false;
         state.statistics = action.payload;
       })
       .addCase(getBookingStatisticsForAirline.rejected, (state, action) => {
+        if (state.statisticsRequestId !== action.meta.requestId) return;
+        state.statisticsStatus = 'failed';
+        state.statisticsRequestId = null;
         console.log(
           "❌ getBookingStatisticsForAirline rejected:",
           action.payload
         );
         state.loading = false;
+        state.error = action.payload || "Failed to fetch booking statistics";
       });
 
     // ---------- GET ROUTE PERFORMANCE FOR AIRLINE ----------
@@ -251,45 +282,38 @@ const bookingSlice = createSlice({
       .addCase(getRoutePerformanceForAirline.pending, (state) => {
         console.log("⏳ getRoutePerformanceForAirline pending");
         state.routePerformanceLoading = true;
-        state.error = null;
+        state.routePerformanceError = null;
       })
       .addCase(getRoutePerformanceForAirline.fulfilled, (state, action) => {
         console.log("✅ getRoutePerformanceForAirline fulfilled");
         state.routePerformanceLoading = false;
         state.routePerformance = action.payload;
+        state.routePerformanceError = null;
       })
       .addCase(getRoutePerformanceForAirline.rejected, (state, action) => {
         console.log(
           "❌ getRoutePerformanceForAirline rejected:",
           action.payload
         );
-        // ---------- GET AIRPORT PERFORMANCE FOR AIRLINE ----------
-        builder
-          .addCase(getAirportPerformanceForAirline.pending, (state) => {
-            console.log("⏳ getAirportPerformanceForAirline pending");
-            state.airportPerformanceLoading = true;
-            state.error = null;
-          })
-          .addCase(
-            getAirportPerformanceForAirline.fulfilled,
-            (state, action) => {
-              console.log("✅ getAirportPerformanceForAirline fulfilled");
-              state.airportPerformanceLoading = false;
-              state.airportPerformance = action.payload;
-            }
-          )
-          .addCase(
-            getAirportPerformanceForAirline.rejected,
-            (state, action) => {
-              console.log(
-                "❌ getAirportPerformanceForAirline rejected:",
-                action.payload
-              );
-              state.airportPerformanceLoading = false;
-              state.error = action.payload;
-            }
-          );
         state.routePerformanceLoading = false;
+        state.routePerformanceError = action.payload || "Failed to fetch route analytics";
+      });
+
+    // ---------- GET AIRPORT PERFORMANCE FOR AIRLINE ----------
+    builder
+      .addCase(getAirportPerformanceForAirline.pending, (state) => {
+        console.log("⏳ getAirportPerformanceForAirline pending");
+        state.airportPerformanceLoading = true;
+        state.error = null;
+      })
+      .addCase(getAirportPerformanceForAirline.fulfilled, (state, action) => {
+        console.log("✅ getAirportPerformanceForAirline fulfilled");
+        state.airportPerformanceLoading = false;
+        state.airportPerformance = action.payload;
+      })
+      .addCase(getAirportPerformanceForAirline.rejected, (state, action) => {
+        console.log("❌ getAirportPerformanceForAirline rejected:", action.payload);
+        state.airportPerformanceLoading = false;
         state.error = action.payload;
       });
 

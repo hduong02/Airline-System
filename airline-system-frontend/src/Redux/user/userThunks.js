@@ -29,16 +29,22 @@ export const getUserProfile = createAsyncThunk(
 
 
 
-// 🔹 Get all users (super admin)
+// Fetch one server-filtered page of users (super admin).
 export const getAllUsers = createAsyncThunk(
   "user/getAll",
-  async (_, { rejectWithValue }) => {
+  async ({ page = 0, size = 25, search = "", role, sortBy = "fullName", direction = "asc" } = {}, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get("/api/users", { headers: getHeaders() });
+      const res = await api.get("/api/users", {
+        headers: getHeaders(), signal,
+        params: { page, size, search, role: role === "all" ? undefined : role, sortBy, direction },
+      });
+      if (!Array.isArray(res.data?.content)) {
+        throw new Error("Unable to load users. Please try again later.");
+      }
       return res.data;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch users"
+        err.response?.data?.message || err.message || "Failed to fetch users"
       );
     }
   }

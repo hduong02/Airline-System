@@ -23,7 +23,11 @@ import { sidebarSections } from "./sideBarSections"
 
 
 
-const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
+const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse, counts = {} }) => {
+  const sections = sidebarSections.map(section => ({
+    ...section,
+    items: section.items.map(item => ({ ...item, count: counts[item.id] ?? null })),
+  }))
   const [expandedSections, setExpandedSections] = React.useState({
     airlines: false,
     flights: true,
@@ -83,7 +87,7 @@ const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
 
       {/* Navigation */}
       <ScrollArea className="flex-1 min-h-0 py-4">
-        {sidebarSections.map((section) => {
+        {sections.map((section) => {
           const SectionIcon = section.icon
           const isExpanded = expandedSections[section.id]
           const hasActiveItem = section.items.some(item => item.path === location.pathname)
@@ -116,7 +120,7 @@ const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
                 </div>
                 {!isCollapsed && (
                   <div className="flex items-center gap-2">
-                    {section.items.some(item => item.count) && (
+                    {section.items.some(item => item.count !== null) && (
                       <Badge className="bg-slate-600 text-slate-200 text-xs">
                         {section.items.reduce((sum, item) => sum + (item.count || 0), 0)}
                       </Badge>
@@ -149,7 +153,7 @@ const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
                         }} className={cn(isActive && "bg-accent text-accent-foreground")}>
                           <ItemIcon className="h-4 w-4" />
                           <span>{item.label}</span>
-                          {item.count && <Badge variant="secondary" className="ml-auto">{item.count}</Badge>}
+                          {item.count !== null && <Badge variant="secondary" className="ml-auto">{item.count}</Badge>}
                         </DropdownMenuItem>
                       )
                     })}
@@ -203,7 +207,7 @@ const AirlineSidebar = ({ onSectionChange, isCollapsed, onToggleCollapse }) => {
                               {item.label}
                             </span>
                           </div>
-                          {item.count && (
+                          {item.count !== null && (
                             <Badge className={cn(
                               "text-xs transition-all duration-200",
                               isActive 

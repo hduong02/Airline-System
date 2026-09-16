@@ -9,7 +9,8 @@ import com.example.user_service.mapper.UserMapper;
 import com.example.user_service.model.User;
 import com.example.user_service.service.UserService;
 
-import java.util.List;
+import com.example.enums.UserRole;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,9 +33,15 @@ public class UserController {
     }
 
     @GetMapping("/api/users")
-    public ResponseEntity<List<UserDto>> getUsers() throws Exception {
-        List<User> users = userService.getUsers();
-        return ResponseEntity.ok(UserMapper.toDtoList(users));
+    public ResponseEntity<Page<UserDto>> getUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) UserRole role,
+            @RequestParam(defaultValue = "fullName") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+        return ResponseEntity.ok(userService.getUsers(page, size, search, role, sortBy, direction)
+                .map(UserMapper::toDto));
     }
 }
 

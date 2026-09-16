@@ -4,6 +4,25 @@ import { getHeaders } from "@/utils/getHeaders";
 
 const API_URL = "/api/payments";
 
+export const getAirlinePayments = createAsyncThunk(
+  'payment/getAirline',
+  async ({ page = 0, size = 20, sortBy = 'createdAt', sortDirection = 'DESC',
+    search = '', status = 'all', gateway = 'all' } = {}, { rejectWithValue, signal }) => {
+    try {
+      const params = new URLSearchParams({ page: String(page), size: String(size), sortBy, sortDirection });
+      if (search.trim()) params.set('search', search.trim());
+      if (status !== 'all') params.set('status', status);
+      if (gateway !== 'all') params.set('gateway', gateway);
+      const response = await api.get(`/api/bookings/transactions/airline?${params}`, {
+        headers: getHeaders(), signal,
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.response?.data?.detail || 'Failed to fetch airline transactions');
+    }
+  },
+);
+
 
 
 

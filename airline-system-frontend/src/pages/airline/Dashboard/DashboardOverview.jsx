@@ -11,9 +11,7 @@ const DashboardOverview = ({
 
   getStatusBadge,
   handleEditFlight,
-  handleDeleteFlight,
-  setShowFlightForm,
-  setEditingFlight
+  handleDeleteFlight
 }) => {
   const {flights}=useSelector(store=>store.flight)
   const navigate = useNavigate();
@@ -51,10 +49,7 @@ const DashboardOverview = ({
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => {
-                  setEditingFlight(null)
-                  setShowFlightForm(true)
-                }}
+                onClick={() => navigate('/airline/flights/new')}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Flight

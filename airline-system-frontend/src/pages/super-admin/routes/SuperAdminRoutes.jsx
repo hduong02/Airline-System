@@ -51,7 +51,7 @@ const SuperAdminRoutes = ({ platformStats }) => {
       <Route path="/airlines/pending" element={<AirlineManagement activeSection={"airlines-pending"} />} />
       <Route path="/airlines/suspended" element={<AirlineManagement activeSection={"airlines-suspended"} />} />
       <Route path="/airlines/compliance" element={<AirlineManagement activeSection={"airlines-compliance"} />} />
-      <Route path="/airlines/commission" element={<AirlineManagement activeSection={"airlines-commission"} />} />
+      <Route path="/airlines/commission" element={null} />
     
 
       {/* Airport Management */}

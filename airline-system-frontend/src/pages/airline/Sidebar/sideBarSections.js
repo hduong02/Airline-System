@@ -64,7 +64,6 @@ export const sidebarSections = [
         id: "aircraft",
         label: "All Aircraft",
         icon: PlaneTakeoff,
-        count: 4,
         path: "/airline/aircraft",
       },
       {
@@ -86,7 +85,6 @@ export const sidebarSections = [
         id: "flights",
         label: "All Flights",
         icon: Plane,
-        count: 45,
         path: "/airline/flights",
       },
       {
@@ -132,7 +130,6 @@ export const sidebarSections = [
         id: "schedules",
         label: "All Schedules",
         icon: Calendar,
-        count: 45,
         path: "/airline/schedules",
       },
       {
@@ -261,7 +258,6 @@ export const sidebarSections = [
         id: "bookings-list",
         label: "All Bookings",
         icon: Users,
-        count: 234,
         path: "/airline/bookings",
       },
       {

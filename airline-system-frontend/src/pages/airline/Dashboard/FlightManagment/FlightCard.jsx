@@ -3,6 +3,8 @@ import { MapPin, TrendingUp, Eye, Trash2, Edit, Users, Clock, Plane, Building2 }
 import React from "react";
 
 const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
+  // An absent summary price does not establish whether separate fares exist.
+  const hasStartingFare = Number.isFinite(flight.lowestPrice) && flight.lowestPrice >= 0;
   // Calculate available seats
   const totalSeats = flight.aircraft?.totalSeats || 0;
   const availableSeats = flight.totalAvailableSeats ?? totalSeats;
@@ -82,15 +84,15 @@ const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
             <span className="text-sm font-medium text-foreground">Pricing</span>
           </div>
           <div className="text-sm">
-            {flight.lowestPrice ? (
+            {hasStartingFare ? (
               <>
                 <div className="font-medium text-foreground">${flight.lowestPrice.toLocaleString()}</div>
                 <div className="text-muted-foreground text-xs">Starting fare</div>
               </>
             ) : (
               <>
-                <div className="font-medium text-muted-foreground">Not set</div>
-                <div className="text-muted-foreground text-xs">Configure pricing</div>
+                <div className="font-medium text-muted-foreground">Pricing unavailable</div>
+                <div className="text-muted-foreground text-xs">View fares in flight details</div>
               </>
             )}
           </div>

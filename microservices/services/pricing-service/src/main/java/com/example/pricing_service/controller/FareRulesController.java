@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.payload.request.FareRulesRequest;
 import com.example.payload.response.FareRulesResponse;
 import com.example.pricing_service.service.FareRulesService;
+import com.example.pricing_service.client.AirlineClient;
 
 import java.util.List;
 
@@ -18,6 +19,14 @@ import java.util.List;
 public class FareRulesController {
 
     private final FareRulesService fareRulesService;
+    private final AirlineClient airlineClient;
+
+    @GetMapping
+    public ResponseEntity<List<FareRulesResponse>> getFareRulesForOwner(
+            @RequestHeader("X-User-Id") Long userId) {
+        Long airlineId = airlineClient.getAirlineByOwner(userId).getId();
+        return ResponseEntity.ok(fareRulesService.getFareRulesByAirlineId(airlineId));
+    }
 
     @PostMapping
     public ResponseEntity<FareRulesResponse> createFareRules(

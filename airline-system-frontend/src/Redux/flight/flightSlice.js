@@ -39,6 +39,7 @@ const flightSlice = createSlice({
         state.loading = false;
         // state.flight = action.payload;
         state.flights.unshift(action.payload);
+        if (state.flightPage) state.flightPage.totalElements += 1;
       })
       .addCase(createFlight.rejected, (state, action) => {
         state.loading = false;
@@ -105,6 +106,7 @@ const flightSlice = createSlice({
       .addCase(deleteFlight.fulfilled, (state, action) => {
         state.loading = false;
         state.flights = state.flights.filter(f => f.id !== action.payload);
+        if (state.flightPage) state.flightPage.totalElements = Math.max(0, state.flightPage.totalElements - 1);
         if (state.flight?.id === action.payload) state.flight = null;
       })
       .addCase(deleteFlight.rejected, (state, action) => {

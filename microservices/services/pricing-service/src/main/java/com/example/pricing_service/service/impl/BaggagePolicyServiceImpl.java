@@ -1,6 +1,7 @@
 package com.example.pricing_service.service.impl;
 
 import com.example.pricing_service.mapper.BaggagePolicyMapper;
+import com.example.pricing_service.client.FlightClient;
 import com.example.pricing_service.model.BaggagePolicy;
 import com.example.pricing_service.model.Fare;
 import com.example.pricing_service.repository.BaggagePolicyRepository;
@@ -9,10 +10,13 @@ import com.example.pricing_service.service.BaggagePolicyService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payload.request.BaggagePolicyRequest;
 import com.example.payload.response.BaggagePolicyResponse;
+import com.example.payload.response.FlightResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +28,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     private final BaggagePolicyRepository baggagePolicyRepository;
     private final FareRepository fareRepository;
+    private final FlightClient flightClient;
 
     @Override
     public BaggagePolicyResponse createBaggagePolicy(
@@ -38,6 +43,11 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
         }
 
         BaggagePolicy policy = BaggagePolicyMapper.toEntity(request, fare);
+        FlightResponse flight = flightClient.getFlightById(fare.getFlightId());
+        if (flight == null || flight.getAirline() == null || flight.getAirline().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Flight airline is unavailable");
+        }
+        policy.setAirlineId(flight.getAirline().getId());
         BaggagePolicy saved = baggagePolicyRepository.save(policy);
         return BaggagePolicyMapper.toResponse(saved);
     }

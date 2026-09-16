@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.payload.request.BaggagePolicyRequest;
 import com.example.payload.response.BaggagePolicyResponse;
 import com.example.pricing_service.service.BaggagePolicyService;
+import com.example.pricing_service.client.AirlineClient;
 
 
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.List;
 public class BaggagePolicyController {
 
     private final BaggagePolicyService baggagePolicyService;
+    private final AirlineClient airlineClient;
 
     @PostMapping
     public ResponseEntity<BaggagePolicyResponse> createBaggagePolicy(
@@ -37,6 +39,13 @@ public class BaggagePolicyController {
     public ResponseEntity<BaggagePolicyResponse> getBaggagePolicyByFareId(
             @PathVariable Long fareId) throws Exception {
         return ResponseEntity.ok(baggagePolicyService.getBaggagePolicyByFareId(fareId));
+    }
+
+    @GetMapping("/airline")
+    public ResponseEntity<List<BaggagePolicyResponse>> getBaggagePoliciesForOwner(
+            @RequestHeader("X-User-Id") Long userId) {
+        Long airlineId = airlineClient.getAirlineByOwner(userId).getId();
+        return ResponseEntity.ok(baggagePolicyService.getBaggagePoliciesByAirlineId(airlineId));
     }
 
     @GetMapping("/airline/{airlineId}")

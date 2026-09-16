@@ -10,6 +10,9 @@ import {
 const initialState = {
   userProfile: null,
   users: [],
+  usersTotalElements: 0,
+  usersTotalPages: 0,
+  usersRequestId: null,
   customers: [],
   cashiers: [],
   selectedUser: null,
@@ -26,6 +29,9 @@ const userSlice = createSlice({
       state.userProfile = null;
       state.selectedUser = null;
       state.users = [];
+      state.usersTotalElements = 0;
+      state.usersTotalPages = 0;
+      state.usersRequestId = null;
       state.customers = [];
       state.cashiers = [];
       state.error = null;
@@ -45,14 +51,22 @@ const userSlice = createSlice({
 
       
 
-      .addCase(getAllUsers.pending, (state) => { state.usersLoading = true; })
+      .addCase(getAllUsers.pending, (state, action) => {
+        state.usersLoading = true;
+        state.usersRequestId = action.meta.requestId;
+        state.error = null;
+      })
       .addCase(getAllUsers.fulfilled, (state, action) => {
+        if (state.usersRequestId !== action.meta.requestId) return;
         state.usersLoading = false;
-        state.users = action.payload;
+        state.users = action.payload.content;
+        state.usersTotalElements = action.payload.totalElements;
+        state.usersTotalPages = action.payload.totalPages;
       })
       .addCase(getAllUsers.rejected, (state, action) => {
+        if (state.usersRequestId !== action.meta.requestId) return;
         state.usersLoading = false;
-        state.error = action.payload;
+        if (!action.meta.aborted) state.error = action.payload;
       })
 
       .addCase(getUserById.fulfilled, (state, action) => {
@@ -65,7 +79,7 @@ const userSlice = createSlice({
       })
 
       .addMatcher(
-        (action) => action.type.startsWith('user/') && action.type.endsWith('/rejected'),
+        (action) => action.type.startsWith('user/') && action.type.endsWith('/rejected') && action.type !== getAllUsers.rejected.type,
         (state, action) => {
           state.error = action.payload;
         }

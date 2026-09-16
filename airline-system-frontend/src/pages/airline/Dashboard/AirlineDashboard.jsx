@@ -16,6 +16,10 @@ import AirlineSidebar from "../Sidebar/AirlineSidebar"
 import AirlineRoutes from "../routes/AirlineRoutes"
 import { useSelector, useDispatch } from "react-redux"
 import { getFlightsByAirline } from "@/Redux/flight/flightThunk"
+import { listAllAircrafts } from "@/Redux/aircraft/aircraftThunks"
+import { getAllFlightSchedules } from "@/Redux/flightSchedule/flightScheduleThunk"
+import { getBookingsByAirline, getBookingStatisticsForAirline } from "@/Redux/booking/bookingThunk"
+import { formatCurrency } from "@/utils/formateCurrency"
 
 
 
@@ -41,6 +45,8 @@ const AirlineDashboard = () => {
     if (pathname.includes('/coupons')) return 'pricing'
     if (pathname.includes('/pricing')) return 'pricing'
     if (pathname.includes('/bookings')) return 'bookings'
+    if (pathname.includes('/transactions')) return 'transactions'
+    if (pathname.includes('/profile')) return 'profile'
     if (pathname.includes('/route-performance')) return 'route-performance'
     if (pathname.includes('/airport-performance')) return 'airport-performance';
     if (pathname.includes('/reports')) return 'reports'
@@ -51,7 +57,10 @@ const AirlineDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false)
 
   // Existing flight management state
-  const { flights } = useSelector(state => state.flight)
+  const { flights, flightPage, loading: flightsLoading, error: flightsError } = useSelector(state => state.flight)
+  const fleet = useSelector(state => state.aircraft)
+  const schedules = useSelector(state => state.flightSchedule)
+  const booking = useSelector(state => state.booking)
 
 
   const [statusFilter, setStatusFilter] = React.useState("all")
@@ -62,26 +71,38 @@ const AirlineDashboard = () => {
   // Load flights on component mount
   React.useEffect(() => {
     dispatch(getFlightsByAirline());
+    dispatch(listAllAircrafts());
+    dispatch(getAllFlightSchedules());
   }, [dispatch])
 
 
-  console.log("flightList ", flights)
+  React.useEffect(() => {
+    if (activeSection === 'overview') {
+      dispatch(getBookingsByAirline());
+      dispatch(getBookingStatisticsForAirline());
+    }
+  }, [dispatch, activeSection])
 
 
 
 
-  const dashboardStats = React.useMemo(() => {
-    const flightList = flights || [];
-    return {
-      totalFlights: flightList.length,
-      activeFlights: flightList.filter(f => f.status === "Active").length,
-      totalBookings: flightList.reduce((sum, f) => sum + (f.bookings || 0), 0),
-      avgOccupancy: flightList.length > 0
-        ? Math.round(flightList.reduce((sum, f) => sum + (f.occupancy || 0), 0) / flightList.length)
-        : 0,
-      revenue: flightList.reduce((sum, f) => sum + ((f.bookings || 0) * (f.pricing?.economy || 0)), 0)
-    };
-  }, [flights])
+  const counts = {
+    aircraft: fleet.fleetLoaded && !fleet.error ? fleet.aircrafts.length : null,
+    flights: !flightsLoading && !flightsError ? flightPage?.totalElements ?? null : null,
+    schedules: schedules.listLoaded && !schedules.error
+      ? schedules.paginatedFlightSchedules?.totalElements ?? schedules.flightSchedules.length : null,
+    'bookings-list': booking.ownerBookingsStatus === 'succeeded' ? booking.ownerBookings.length : null,
+  }
+  const dashboardStats = {
+    totalFlights: counts.flights ?? 'Unavailable',
+    scheduledFlights: counts.flights !== null && flights.length === counts.flights
+      ? flights.filter(f => f.status === 'SCHEDULED').length : 'Unavailable',
+    totalBookings: counts['bookings-list'] ?? 'Unavailable',
+    // Flight definitions do not contain dated inventory or occupancy metrics.
+    avgOccupancy: 'Unavailable',
+    revenue: booking.statisticsStatus === 'succeeded' && booking.statistics?.revenueThisMonth != null
+      ? formatCurrency(booking.statistics.revenueThisMonth) : 'Unavailable',
+  }
 
   // Handle sidebar section changes
   const handleSectionChange = (sectionId) => {
@@ -192,6 +213,12 @@ const AirlineDashboard = () => {
         break
 
       // Bookings
+      case 'airline-profile':
+        navigate('/airline/profile')
+        break
+      case 'transactions':
+        navigate('/airline/transactions')
+        break
       case 'bookings-list':
         navigate('/airline/bookings')
         break
@@ -236,6 +263,7 @@ const AirlineDashboard = () => {
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
       <AirlineSidebar
+        counts={counts}
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         isCollapsed={isSidebarCollapsed}
@@ -265,6 +293,8 @@ const AirlineDashboard = () => {
                                     activeSection === "meals" ? "Meal Management" :
                                       activeSection === "pricing" ? "Pricing & Discounts" :
                                         activeSection === "bookings" ? "Booking Management" :
+                                        activeSection === "transactions" ? "Transactions" :
+                                        activeSection === "profile" ? "Airline Profile" :
                                           activeSection === "route-performance" ? "Route Performance" :
                                             activeSection === "reports" ? "Reports & Analytics" :
                                               "Dashboard"}
@@ -282,6 +312,8 @@ const AirlineDashboard = () => {
                                     activeSection === "meals" ? "Manage meal options and catering services" :
                                       activeSection === "pricing" ? "Configure pricing and promotional offers" :
                                         activeSection === "bookings" ? "View and manage passenger bookings" :
+                                        activeSection === "transactions" ? "View and manage your airline payment transactions" :
+                                        activeSection === "profile" ? "Manage your airline profile and contact information" :
                                           activeSection === "route-performance" ? "Analyze your most profitable and popular routes" :
                                             activeSection === "reports" ? "Analytics and performance insights" :
                                               "Manage your airline operations"}
@@ -305,20 +337,20 @@ const AirlineDashboard = () => {
                   <div className="text-sm text-blue-800">Total Flights</div>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                  <div className="text-2xl font-bold text-green-600">{dashboardStats.activeFlights}</div>
-                  <div className="text-sm text-green-800">Active Flights</div>
+                  <div className="text-2xl font-bold text-green-600">{dashboardStats.scheduledFlights}</div>
+                  <div className="text-sm text-green-800">Scheduled Flights</div>
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
                   <div className="text-2xl font-bold text-purple-600">{dashboardStats.totalBookings}</div>
                   <div className="text-sm text-purple-800">Total Bookings</div>
                 </div>
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
-                  <div className="text-2xl font-bold text-orange-600">{dashboardStats.avgOccupancy}%</div>
+                  <div className="text-2xl font-bold text-orange-600">{dashboardStats.avgOccupancy}</div>
                   <div className="text-sm text-orange-800">Avg Occupancy</div>
                 </div>
                 <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-xl border border-indigo-200">
-                  <div className="text-2xl font-bold text-indigo-600">${(dashboardStats.revenue / 100000).toFixed(1)}L</div>
-                  <div className="text-sm text-indigo-800">Revenue</div>
+                  <div className="text-2xl font-bold text-indigo-600">{dashboardStats.revenue}</div>
+                  <div className="text-sm text-indigo-800">Monthly Revenue</div>
                 </div>
               </div>
             )}

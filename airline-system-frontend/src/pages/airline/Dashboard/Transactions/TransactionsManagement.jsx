@@ -1,12 +1,11 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllPayments } from "@/Redux/payment/paymentThunk";
+import { getAirlinePayments } from "@/Redux/payment/paymentThunk";
 import {
   Search,
   Filter,
   DollarSign,
   CreditCard,
-  Download,
   Eye,
   RefreshCw,
   CheckCircle,
@@ -49,8 +48,14 @@ import { cn } from "@/lib/utils";
 
 const TransactionsManagement = () => {
   const dispatch = useDispatch();
-  const { payments, loading, error, totalPages, totalElements, currentPage } =
+  const { airlineTransactions, airlineTransactionsLoading: loading, airlineTransactionsError: error } =
     useSelector((state) => state.payment);
+  const filteredPayments = airlineTransactions?.content || [];
+  const totalPages = airlineTransactions?.totalPages || 0;
+  const totalElements = airlineTransactions?.totalElements || 0;
+  const statistics = airlineTransactions?.summary || {
+    totalRevenue: 0, successfulPayments: 0, pendingPayments: 0, failedPayments: 0, successRate: 0,
+  };
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -64,74 +69,17 @@ const TransactionsManagement = () => {
 
   // Fetch payments with filters
   React.useEffect(() => {
-    dispatch(
-      getAllPayments({
+    const request = dispatch(
+      getAirlinePayments({
         page,
         size: pageSize,
         sortBy,
         sortDirection,
+        search: searchQuery, status: statusFilter, gateway: gatewayFilter,
       })
     );
-  }, [dispatch, page, pageSize, sortBy, sortDirection]);
-
-  // Filter payments locally
-  const filteredPayments = React.useMemo(() => {
-    if (!payments) return [];
-
-    return payments.filter((payment) => {
-      const matchesSearch =
-        !searchQuery ||
-        payment.transactionId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.gatewayPaymentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.bookingId?.toString().includes(searchQuery);
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        payment.status?.toUpperCase() === statusFilter.toUpperCase();
-
-      const matchesGateway =
-        gatewayFilter === "all" ||
-        payment.gateway?.toUpperCase() === gatewayFilter.toUpperCase();
-
-      return matchesSearch && matchesStatus && matchesGateway;
-    });
-  }, [payments, searchQuery, statusFilter, gatewayFilter]);
-
-  // Calculate statistics
-  const statistics = React.useMemo(() => {
-    if (!payments || payments.length === 0) {
-      return {
-        totalRevenue: 0,
-        successfulPayments: 0,
-        pendingPayments: 0,
-        failedPayments: 0,
-        successRate: 0,
-      };
-    }
-
-    const successful = payments.filter((p) => p.status === "SUCCESS");
-    const pending = payments.filter(
-      (p) => p.status === "PENDING" || p.status === "PROCESSING"
-    );
-    const failed = payments.filter((p) => p.status === "FAILED");
-
-    const totalRevenue = successful.reduce(
-      (sum, p) => sum + (p.amount || 0),
-      0
-    );
-    const successRate =
-      payments.length > 0
-        ? ((successful.length / payments.length) * 100).toFixed(1)
-        : 0;
-
-    return {
-      totalRevenue,
-      successfulPayments: successful.length,
-      pendingPayments: pending.length,
-      failedPayments: failed.length,
-      successRate,
-    };
-  }, [payments]);
+    return () => request?.abort?.();
+  }, [dispatch, page, pageSize, sortBy, sortDirection, searchQuery, statusFilter, gatewayFilter]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -202,6 +150,7 @@ const TransactionsManagement = () => {
 
 
   const handleSort = (field) => {
+    setPage(0);
     if (sortBy === field) {
       setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC");
     } else {
@@ -212,11 +161,12 @@ const TransactionsManagement = () => {
 
   const handleRefresh = () => {
     dispatch(
-      getAllPayments({
+      getAirlinePayments({
         page,
         size: pageSize,
         sortBy,
         sortDirection,
+        search: searchQuery, status: statusFilter, gateway: gatewayFilter,
       })
     );
   };
@@ -255,7 +205,7 @@ const TransactionsManagement = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
           <p className="text-gray-600 mt-1">
-            Manage and monitor all payment transactions
+            Monitor your airline's payment transactions. Summary cards cover all matching results.
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={loading}>
@@ -375,13 +325,13 @@ const TransactionsManagement = () => {
               <Input
                 placeholder="Search by Transaction ID, Booking ID..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                 className="pl-9"
               />
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(0); }}>
               <SelectTrigger className={"w-full"}>
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -397,7 +347,7 @@ const TransactionsManagement = () => {
             </Select>
 
             {/* Gateway Filter */}
-            <Select value={gatewayFilter} onValueChange={setGatewayFilter}>
+            <Select value={gatewayFilter} onValueChange={(value) => { setGatewayFilter(value); setPage(0); }}>
               <SelectTrigger className={"w-full"}>
                 <SelectValue placeholder="All Gateways" />
               </SelectTrigger>
@@ -436,16 +386,12 @@ const TransactionsManagement = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              All Transactions ({filteredPayments.length})
+              Matching Transactions ({totalElements})
             </CardTitle>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {loading && !payments ? (
+          {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               <span className="ml-3 text-gray-600">Loading transactions...</span>
@@ -555,11 +501,11 @@ const TransactionsManagement = () => {
           )}
 
           {/* Pagination */}
-          {!loading && filteredPayments.length > 0 && (
+          {!loading && totalElements > 0 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-gray-600">
-                Showing {page * pageSize + 1} to{" "}
-                {Math.min((page + 1) * pageSize, totalElements)} of{" "}
+                Showing {filteredPayments.length ? page * pageSize + 1 : 0} to{" "}
+                {filteredPayments.length ? Math.min((page + 1) * pageSize, totalElements) : 0} of{" "}
                 {totalElements} transactions
               </div>
               <div className="flex items-center gap-2">

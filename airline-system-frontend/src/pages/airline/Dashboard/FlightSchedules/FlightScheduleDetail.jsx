@@ -224,6 +224,12 @@ const FlightScheduleDetail = () => {
     return timeZone?.split('/').pop() || 'Local';
   };
 
+  const formatAirportAddress = (airport) => {
+    return [airport?.address?.street, airport?.address?.cityName]
+      .filter(Boolean)
+      .join(', ') || 'Address not available';
+  };
+
   const getDuration = (depTime, arrTime) => {
     const [depHour, depMin] = depTime.split(":").map(Number);
     const [arrHour, arrMin] = arrTime.split(":").map(Number);
@@ -273,7 +279,7 @@ const FlightScheduleDetail = () => {
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <Navigation className="h-4 w-4" />
-                {flightSchedule.departureAirport.city.cityCode} → {flightSchedule.arrivalAirport.city.cityCode}
+                {flightSchedule.departureAirport?.city?.cityCode || flightSchedule.departureAirport?.iataCode || '—'} → {flightSchedule.arrivalAirport?.city?.cityCode || flightSchedule.arrivalAirport?.iataCode || '—'}
               </span>
               <span className="flex items-center gap-1">
                 <Timer className="h-4 w-4" />
@@ -310,7 +316,7 @@ const FlightScheduleDetail = () => {
                 <div className="space-y-3">
                   <div className="flex items-baseline gap-2">
                     <div className="text-3xl font-bold text-gray-900">
-                      {flightSchedule.departureAirport.iataCode}
+                      {flightSchedule.departureAirport?.iataCode || '—'}
                     </div>
                     <div className="text-lg font-semibold text-gray-700">
                       {formatTime(flightSchedule.departureTime)}
@@ -318,18 +324,18 @@ const FlightScheduleDetail = () => {
                   </div>
                   <div>
                     <div className="text-base font-semibold text-gray-800">
-                      {flightSchedule.departureAirport.city.name}
+                      {flightSchedule.departureAirport?.city?.name || 'City not available'}
                     </div>
                     <div className="text-sm text-gray-600 leading-relaxed">
-                      {flightSchedule.departureAirport.name}
+                      {flightSchedule.departureAirport?.name || 'Airport not available'}
                     </div>
                   </div>
                   <div className="pt-2 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Globe className="h-3 w-3" />
-                      <span>{formatTimeZone(flightSchedule.departureAirport.timeZone)}</span>
+                      <span>{formatTimeZone(flightSchedule.departureAirport?.timeZone)}</span>
                       <span>•</span>
-                      <span>{flightSchedule.departureAirport.city.countryName}</span>
+                      <span>{flightSchedule.departureAirport?.city?.countryName || 'Country not available'}</span>
                     </div>
                   </div>
                 </div>
@@ -368,7 +374,7 @@ const FlightScheduleDetail = () => {
                 <div className="space-y-3">
                   <div className="flex items-baseline gap-2">
                     <div className="text-3xl font-bold text-gray-900">
-                      {flightSchedule.arrivalAirport.iataCode}
+                      {flightSchedule.arrivalAirport?.iataCode || '—'}
                     </div>
                     <div className="text-lg font-semibold text-gray-700">
                       {formatTime(flightSchedule.arrivalTime)}
@@ -376,18 +382,18 @@ const FlightScheduleDetail = () => {
                   </div>
                   <div>
                     <div className="text-base font-semibold text-gray-800">
-                      {flightSchedule.arrivalAirport.city.name}
+                      {flightSchedule.arrivalAirport?.city?.name || 'City not available'}
                     </div>
                     <div className="text-sm text-gray-600 leading-relaxed">
-                      {flightSchedule.arrivalAirport.name}
+                      {flightSchedule.arrivalAirport?.name || 'Airport not available'}
                     </div>
                   </div>
                   <div className="pt-2 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Globe className="h-3 w-3" />
-                      <span>{formatTimeZone(flightSchedule.arrivalAirport.timeZone)}</span>
+                      <span>{formatTimeZone(flightSchedule.arrivalAirport?.timeZone)}</span>
                       <span>•</span>
-                      <span>{flightSchedule.arrivalAirport.city.countryName}</span>
+                      <span>{flightSchedule.arrivalAirport?.city?.countryName || 'Country not available'}</span>
                     </div>
                   </div>
                 </div>
@@ -491,10 +497,10 @@ const FlightScheduleDetail = () => {
                       Departure Terminal
                     </label>
                     <div className="text-sm text-gray-600">
-                      {flightSchedule.departureAirport.detailedName}
+                      {flightSchedule.departureAirport?.detailedName || flightSchedule.departureAirport?.name || 'Terminal not available'}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {flightSchedule.departureAirport.address.street}, {flightSchedule.departureAirport.address.cityName}
+                      {formatAirportAddress(flightSchedule.departureAirport)}
                     </div>
                   </div>
 
@@ -503,10 +509,10 @@ const FlightScheduleDetail = () => {
                       Arrival Terminal
                     </label>
                     <div className="text-sm text-gray-600">
-                      {flightSchedule.arrivalAirport.detailedName}
+                      {flightSchedule.arrivalAirport?.detailedName || flightSchedule.arrivalAirport?.name || 'Terminal not available'}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {flightSchedule.arrivalAirport.address.street}, {flightSchedule.arrivalAirport.address.cityName}
+                      {formatAirportAddress(flightSchedule.arrivalAirport)}
                     </div>
                   </div>
 
@@ -519,7 +525,7 @@ const FlightScheduleDetail = () => {
                       <div>
                         <span className="text-gray-500">Region</span>
                         <div className="font-medium text-gray-700">
-                          {flightSchedule.departureAirport.address.regionCode}
+                          {flightSchedule.departureAirport?.address?.regionCode || 'Region not available'}
                         </div>
                       </div>
                     </div>

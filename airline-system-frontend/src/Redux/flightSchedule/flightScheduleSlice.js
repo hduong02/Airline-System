@@ -10,6 +10,7 @@ import {
 const initialState = {
   // Data
   flightSchedules: [],
+  listLoaded: false,
   currentFlightSchedule: null,
   paginatedFlightSchedules: {
     content: [],
@@ -46,6 +47,7 @@ const flightScheduleSlice = createSlice({
   reducers: {
     clearFlightScheduleState: (state) => {
       state.flightSchedules = [];
+      state.listLoaded = false;
       state.currentFlightSchedule = null;
       state.paginatedFlightSchedules = initialState.paginatedFlightSchedules;
       state.error = null;
@@ -107,10 +109,12 @@ const flightScheduleSlice = createSlice({
     // ---------- GET ALL ----------
     builder
       .addCase(getAllFlightSchedules.pending, (state) => {
+        state.listLoaded = false;
         state.loading = true;
         state.error = null;
       })
       .addCase(getAllFlightSchedules.fulfilled, (state, action) => {
+        state.listLoaded = true;
         state.loading = false;
         state.flightSchedules = action.payload.content || action.payload;
         state.paginatedFlightSchedules = action.payload;

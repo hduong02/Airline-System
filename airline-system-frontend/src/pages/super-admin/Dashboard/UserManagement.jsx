@@ -17,10 +17,9 @@ import {
 
 /* ─────────────────────── helpers ─────────────────────── */
 const ROLE_META = {
-  ROLE_SUPER_ADMIN: { label: "Super Admin", color: "bg-purple-100 text-purple-700" },
-  ROLE_AIRLINE_ADMIN: { label: "Airline Admin", color: "bg-blue-100 text-blue-700" },
-  ROLE_PASSENGER: { label: "Passenger", color: "bg-green-100 text-green-700" },
-  ROLE_CUSTOMER: { label: "Customer", color: "bg-teal-100 text-teal-700" },
+  ROLE_SYSTEM_ADMIN: { label: "System Admin", color: "bg-purple-100 text-purple-700" },
+  ROLE_AIRLINE_OWNER: { label: "Airline Owner", color: "bg-blue-100 text-blue-700" },
+  ROLE_USER: { label: "Passenger", color: "bg-green-100 text-green-700" },
 };
 
 function getRoleMeta(role) {
@@ -43,7 +42,8 @@ function formatDate(dateStr) {
 }
 
 /* ─────────────────────── stat card ─────────────────────── */
-function StatCard({ icon: Icon, label, value, color }) {
+function StatCard(props) {
+  const { icon: Icon, label, value, color } = props;
   return (
     <div className={`rounded-xl p-4 flex items-center gap-4 ${color}`}>
       <div className="p-3 bg-white/40 rounded-lg">
@@ -83,72 +83,40 @@ function SortHeader({ label, field, sortField, sortDir, onSort }) {
 /* ─────────────────────── main component ─────────────────────── */
 const UserManagement = () => {
   const dispatch = useDispatch();
-  const { users, usersLoading, error } = useSelector((s) => s.user);
+  const { users, usersLoading, error, usersTotalElements = 0, usersTotalPages = 0 } = useSelector((s) => s.user);
 
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [sortField, setSortField] = useState("fullName");
-  const [sortDir, setSortDir] = useState("asc");
+  const [query, setQuery] = useState({ page: 0, size: 25, search: "", role: "all", sortBy: "fullName", direction: "asc" });
+  const { page, size, role: roleFilter, sortBy: sortField, direction: sortDir } = query;
 
   useEffect(() => {
-    dispatch(getAllUsers());
-  }, [dispatch]);
+    const timer = setTimeout(() => {
+      setQuery((previous) => previous.search === search.trim() ? previous : { ...previous, page: 0, search: search.trim() });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    const request = dispatch(getAllUsers(query));
+    return () => request.abort();
+  }, [dispatch, query]);
 
   function handleSort(field) {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
+    setQuery((previous) => ({ ...previous, page: 0, sortBy: field,
+      direction: previous.sortBy === field && previous.direction === "asc" ? "desc" : "asc" }));
   }
 
   /* stats derived from real data */
   const stats = useMemo(() => {
-    const total = users.length;
-    const passengers = users.filter((u) => u.role === "ROLE_PASSENGER" || u.role === "ROLE_CUSTOMER").length;
-    const admins = users.filter((u) => u.role === "ROLE_AIRLINE_ADMIN").length;
-    const superAdmins = users.filter((u) => u.role === "ROLE_SUPER_ADMIN").length;
+    const total = usersTotalElements;
+    const passengers = users.filter((u) => u.role === "ROLE_USER").length;
+    const admins = users.filter((u) => u.role === "ROLE_AIRLINE_OWNER").length;
+    const superAdmins = users.filter((u) => u.role === "ROLE_SYSTEM_ADMIN").length;
     return { total, passengers, admins, superAdmins };
-  }, [users]);
+  }, [users, usersTotalElements]);
 
-  /* filtered + sorted list */
-  const filtered = useMemo(() => {
-    let list = [...users];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (u) =>
-          u.fullName?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.phone?.toLowerCase().includes(q)
-      );
-    }
-
-    if (roleFilter !== "all") {
-      list = list.filter((u) => u.role === roleFilter);
-    }
-
-    list.sort((a, b) => {
-      let av = a[sortField] ?? "";
-      let bv = b[sortField] ?? "";
-      if (sortField === "lastLogin") {
-        av = av ? new Date(av).getTime() : 0;
-        bv = bv ? new Date(bv).getTime() : 0;
-      } else {
-        av = String(av).toLowerCase();
-        bv = String(bv).toLowerCase();
-      }
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return list;
-  }, [users, search, roleFilter, sortField, sortDir]);
-
-  const uniqueRoles = useMemo(() => [...new Set(users.map((u) => u.role).filter(Boolean))], [users]);
+  const filtered = users;
+  const uniqueRoles = Object.keys(ROLE_META);
 
   return (
     <div className="space-y-6">
@@ -164,7 +132,7 @@ const UserManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => dispatch(getAllUsers())}
+          onClick={() => setQuery((previous) => ({ ...previous }))}
           disabled={usersLoading}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-60 transition"
         >
@@ -175,10 +143,10 @@ const UserManagement = () => {
 
       {/* stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Users} label="Total Users" value={stats.total} color="bg-indigo-100 text-indigo-700" />
-        <StatCard icon={User} label="Passengers" value={stats.passengers} color="bg-green-100 text-green-700" />
-        <StatCard icon={Plane} label="Airline Admins" value={stats.admins} color="bg-blue-100 text-blue-700" />
-        <StatCard icon={Shield} label="Super Admins" value={stats.superAdmins} color="bg-purple-100 text-purple-700" />
+        <StatCard icon={Users} label="Matching Users" value={stats.total} color="bg-indigo-100 text-indigo-700" />
+        <StatCard icon={User} label="Passengers on Page" value={stats.passengers} color="bg-green-100 text-green-700" />
+        <StatCard icon={Plane} label="Airline Owners on Page" value={stats.admins} color="bg-blue-100 text-blue-700" />
+        <StatCard icon={Shield} label="System Admins on Page" value={stats.superAdmins} color="bg-purple-100 text-purple-700" />
       </div>
 
       {/* filters */}
@@ -188,6 +156,8 @@ const UserManagement = () => {
           <input
             type="text"
             placeholder="Search by name, email or phone…"
+            aria-label="Search users"
+            maxLength={100}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -195,7 +165,8 @@ const UserManagement = () => {
         </div>
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          aria-label="Filter by role"
+          onChange={(e) => setQuery((previous) => ({ ...previous, page: 0, role: e.target.value }))}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
         >
           <option value="all">All Roles</option>
@@ -249,7 +220,7 @@ const UserManagement = () => {
                   const roleMeta = getRoleMeta(user.role);
                   return (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{page * size + idx + 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-xs flex-shrink-0">
@@ -291,11 +262,22 @@ const UserManagement = () => {
                 })}
               </tbody>
             </table>
-            <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400 text-right">
-              Showing {filtered.length} of {users.length} users
-            </div>
           </div>
         )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
+        <span>Showing {usersTotalElements === 0 ? 0 : page * size + 1}–{Math.min((page + 1) * size, usersTotalElements)} of {usersTotalElements} users</span>
+        <label className="flex items-center gap-2">
+          Rows per page
+          <select aria-label="Rows per page" value={size} onChange={(e) => setQuery((previous) => ({ ...previous, page: 0, size: Number(e.target.value) }))} className="rounded border p-2">
+            {[25, 50, 100].map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <div className="flex items-center gap-3">
+          <button disabled={usersLoading || page === 0} onClick={() => setQuery((previous) => ({ ...previous, page: previous.page - 1 }))} className="rounded border px-3 py-2 disabled:opacity-40">Previous</button>
+          <span>Page {page + 1} of {Math.max(1, usersTotalPages)}</span>
+          <button disabled={usersLoading || page + 1 >= usersTotalPages} onClick={() => setQuery((previous) => ({ ...previous, page: previous.page + 1 }))} className="rounded border px-3 py-2 disabled:opacity-40">Next</button>
+        </div>
       </div>
     </div>
   );

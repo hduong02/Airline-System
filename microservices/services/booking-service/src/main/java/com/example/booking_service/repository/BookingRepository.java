@@ -16,6 +16,23 @@ import jakarta.persistence.LockModeType;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
+    interface StatisticsRow {
+        Long getId();
+        Long getFlightId();
+        Instant getBookingDate();
+        BookingStatus getStatus();
+    }
+
+    @Query("""
+            SELECT b.id AS id, b.flightId AS flightId, b.bookingDate AS bookingDate, b.status AS status FROM Booking b
+            WHERE b.airlineId = :airlineId AND b.bookingDate >= :start AND b.bookingDate < :end
+            """)
+    List<StatisticsRow> findStatisticsRows(@Param("airlineId") Long airlineId,
+            @Param("start") Instant start, @Param("end") Instant end);
+
+    @Query("SELECT b.id FROM Booking b WHERE b.airlineId = :airlineId ORDER BY b.id")
+    List<Long> findIdsByAirlineId(@Param("airlineId") Long airlineId);
+
     Optional<Booking> findByBookingReference(String bookingReference);
     Optional<Booking> findByIdAndUserId(Long id, Long userId);
 
