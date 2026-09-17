@@ -38,14 +38,34 @@ export const getFlightScheduleById = createAsyncThunk(
 // ---------- GET ALL ----------
 export const getAllFlightSchedules = createAsyncThunk(
   "flightSchedule/getAll",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get(API_URL, { headers: getHeaders() });
+      const res = await api.get(API_URL, { headers: getHeaders(), signal });
       console.log("✅ getAllFlightSchedules success:", res.data);
       return res.data;
     } catch (err) {
       console.error("❌ getAllFlightSchedules error:", err.response?.data?.message || err.message);
       return rejectWithValue(err.response?.data?.message || "Failed to fetch flight schedules");
+    }
+  }
+);
+
+// One bounded page for management; keep the legacy list separate.
+export const getFlightSchedulePage = createAsyncThunk(
+  "flightSchedule/getPage",
+  async ({ page = 0, size = 20 } = {}, { rejectWithValue, signal }) => {
+    try {
+      const { data } = await api.get(`${API_URL}/page`, {
+        headers: getHeaders(), signal, params: { page, size },
+      });
+      if (!Array.isArray(data?.content) || !Number.isInteger(data.number)
+          || !Number.isInteger(data.totalElements) || data.totalElements < 0
+          || !Number.isInteger(data.totalPages) || data.totalPages < 0) {
+        throw new Error("Invalid schedule page response");
+      }
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch flight schedules");
     }
   }
 );

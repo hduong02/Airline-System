@@ -29,6 +29,10 @@ const initialState = {
     numberOfElements: 0
   },
   
+  listLoading: false,
+  listError: null,
+  listRequestId: null,
+
   // UI State
   loading: false,
   error: null,
@@ -60,6 +64,9 @@ const airlineSlice = createSlice({
   initialState,
   reducers: {
     clearAirlineState: (state) => {
+      state.listRequestId = null;
+      state.listLoading = false;
+      state.listError = null;
       state.airlines = [];
       state.currentAirline = null;
       state.paginatedAirlines = {
@@ -155,20 +162,23 @@ const airlineSlice = createSlice({
       })
 
       // Get All Airlines
-      .addCase(getAllAirlines.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(getAllAirlines.pending, (state, action) => {
+        state.listLoading = true;
+        state.listError = null;
+        state.listRequestId = action.meta.requestId;
       })
       .addCase(getAllAirlines.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.listRequestId !== action.meta.requestId) return;
+        state.listLoading = false;
         state.paginatedAirlines = action.payload;
-        state.airlines = action.payload.content || action.payload;
+        state.airlines = action.payload.content;
       })
       .addCase(getAllAirlines.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+        if (state.listRequestId !== action.meta.requestId) return;
+        state.listLoading = false;
+        state.listError = action.meta.aborted ? null : action.payload;
       })
-      
+
       // Update Airline
       .addCase(updateAirline.pending, (state) => {
         state.loading = true;
@@ -294,7 +304,7 @@ const airlineSlice = createSlice({
 
       // Global error matcher (following your pattern)
       .addMatcher(
-        (action) => action.type.startsWith('airline/') && action.type.endsWith('/rejected'),
+        (action) => action.type.startsWith('airline/') && action.type !== getAllAirlines.rejected.type && action.type.endsWith('/rejected'),
         (state, action) => {
           state.error = action.payload;
         }

@@ -148,3 +148,49 @@ test('owner booking totals survive filtered lists, failed requests, and unrelate
     assert.equal(state.statisticsStatus, 'succeeded');
   } finally { await server.close(); }
 });
+
+
+test('flight management skips bulk flight preload and sidebar uses its server total', async () => {
+  for (const path of ['/airline/flights', '/airline/flights/']) {
+    const { tree, actions } = await dashboard({ flight: { flights: [{ id: 999 }],
+      flightPage: { totalElements: 999 }, managementPage: { totalElements: 105 },
+      managementPageLoading: false, managementPageError: null } }, path);
+    assert.ok(!actions.includes('flights'));
+    assert.equal(findAll(tree, node => node.type === 'AirlineSidebar')[0].props.counts.flights, 105);
+  }
+});
+
+
+test('schedule management skips bulk schedule preload and uses its server total', async () => {
+  for (const path of ['/airline/schedules', '/airline/schedules/']) {
+    const { tree, actions } = await dashboard({ flightSchedule: { flightSchedules: [{ id: 999 }],
+      listLoaded: true, managementPage: { totalElements: 105 },
+      managementPageLoading: false, managementPageError: null } }, path);
+    assert.ok(!actions.includes('schedules'));
+    assert.equal(findAll(tree, node => node.type === 'AirlineSidebar')[0].props.counts.schedules, 105);
+  }
+});
+
+
+test('entering schedules cancels the dashboard full-list request', async () => {
+  let pathname = '/airline/dashboard';
+  const calls = [], aborted = [];
+  const state = { flight: { flights: [] }, aircraft: {}, flightSchedule: {}, booking: {} };
+  const component = await loadComponent('pages/airline/Dashboard/AirlineDashboard.jsx', {
+    useLocation: () => ({ pathname }), useNavigate: () => () => {},
+    useDispatch: () => action => { calls.push(action); return { abort: () => aborted.push(action) }; },
+    useSelector: select => select(state),
+    getFlightsByAirline: () => 'flights', listAllAircrafts: () => 'aircraft',
+    getAllFlightSchedules: () => 'schedules', getBookingsByAirline: () => 'bookings',
+    getBookingStatisticsForAirline: () => 'statistics', formatCurrency: value => `$${value}`,
+  });
+  try {
+    component.render(); component.flushEffects();
+    assert.equal(calls.filter(action => action === 'schedules').length, 1);
+    pathname = '/airline/schedules'; component.render(); component.flushEffects();
+    assert.ok(aborted.includes('schedules'));
+    assert.equal(calls.filter(action => action === 'schedules').length, 1);
+    pathname = '/airline/schedules/new'; component.render(); component.flushEffects();
+    assert.equal(calls.filter(action => action === 'schedules').length, 2);
+  } finally { component.unmount(); }
+});

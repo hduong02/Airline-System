@@ -5,6 +5,7 @@ import {
   updateFlight,
   deleteFlight,
   getFlightsByAirline,
+  getFlightManagementPage,
   getFlightsByAircraft,
 } from "./flightThunk.js";
 
@@ -12,6 +13,10 @@ import {
 const initialState = {
   flights: [],
   flightPage: null,
+  managementPage: null,
+  managementPageLoading: false,
+  managementPageError: null,
+  managementPageRequestId: null,
   flight: null,
   loading: false,
   error: null
@@ -128,6 +133,23 @@ const flightSlice = createSlice({
       .addCase(getFlightsByAirline.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      });
+
+    builder
+      .addCase(getFlightManagementPage.pending, (state, action) => {
+        state.managementPageLoading = true;
+        state.managementPageError = null;
+        state.managementPageRequestId = action.meta.requestId;
+      })
+      .addCase(getFlightManagementPage.fulfilled, (state, action) => {
+        if (state.managementPageRequestId !== action.meta.requestId) return;
+        state.managementPageLoading = false;
+        state.managementPage = action.payload;
+      })
+      .addCase(getFlightManagementPage.rejected, (state, action) => {
+        if (state.managementPageRequestId !== action.meta.requestId) return;
+        state.managementPageLoading = false;
+        state.managementPageError = action.meta.aborted ? null : action.payload;
       });
 
     // ---------- GET BY AIRCRAFT ----------

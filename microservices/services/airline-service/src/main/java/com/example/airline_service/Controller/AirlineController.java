@@ -9,6 +9,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,8 +49,24 @@ public class AirlineController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<AirlineResponse>> getAllAirlines(Pageable pageable) {
-        return ResponseEntity.ok(airlineService.getAllAirlines(pageable));
+    public ResponseEntity<Page<AirlineResponse>> getAllAirlines(
+            Pageable pageable,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) AirlineStatus status) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be nonnegative and size between 1 and 100");
+        }
+        Sort sort = pageable.getSort();
+        for (Sort.Order order : sort) {
+            if (!List.of("id", "name", "iataCode", "icaoCode", "country", "status").contains(order.getProperty())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported airline sort field");
+            }
+        }
+        if (sort.isUnsorted()) sort = Sort.by("name");
+        if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by("id"));
+        return ResponseEntity.ok(airlineService.getAllAirlines(PageRequest.of(page, size, sort), search, status));
     }
 
     @GetMapping("/dropdown")

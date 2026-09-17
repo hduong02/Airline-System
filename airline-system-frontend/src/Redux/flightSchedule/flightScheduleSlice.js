@@ -3,11 +3,16 @@ import {
   createFlightSchedule,
   getFlightScheduleById,
   getAllFlightSchedules,
+  getFlightSchedulePage,
   updateFlightSchedule,
   deleteFlightSchedule
 } from "./flightScheduleThunk.js";
 
 const initialState = {
+  managementPage: null,
+  managementPageLoading: false,
+  managementPageError: null,
+  managementPageRequestId: null,
   // Data
   flightSchedules: [],
   listLoaded: false,
@@ -46,6 +51,10 @@ const flightScheduleSlice = createSlice({
   initialState,
   reducers: {
     clearFlightScheduleState: (state) => {
+      state.managementPage = null;
+      state.managementPageLoading = false;
+      state.managementPageError = null;
+      state.managementPageRequestId = null;
       state.flightSchedules = [];
       state.listLoaded = false;
       state.currentFlightSchedule = null;
@@ -72,6 +81,24 @@ const flightScheduleSlice = createSlice({
     }
   },
   extraReducers: (builder) => {
+    builder
+      .addCase(getFlightSchedulePage.pending, (state, action) => {
+        state.managementPageLoading = true;
+        state.managementPageError = null;
+        state.managementPageRequestId = action.meta.requestId;
+      })
+      .addCase(getFlightSchedulePage.fulfilled, (state, action) => {
+        if (state.managementPageRequestId !== action.meta.requestId) return;
+        state.managementPageLoading = false;
+        state.managementPageRequestId = null;
+        state.managementPage = action.payload;
+      })
+      .addCase(getFlightSchedulePage.rejected, (state, action) => {
+        if (state.managementPageRequestId !== action.meta.requestId) return;
+        state.managementPageLoading = false;
+        state.managementPageRequestId = null;
+        state.managementPageError = action.meta.aborted ? null : action.payload || action.error.message;
+      });
     // ---------- CREATE ----------
     builder
       .addCase(createFlightSchedule.pending, (state) => {
@@ -117,7 +144,11 @@ const flightScheduleSlice = createSlice({
         state.listLoaded = true;
         state.loading = false;
         state.flightSchedules = action.payload.content || action.payload;
-        state.paginatedFlightSchedules = action.payload;
+        state.paginatedFlightSchedules = Array.isArray(action.payload)
+          ? { ...initialState.paginatedFlightSchedules, content: action.payload,
+              totalElements: action.payload.length, numberOfElements: action.payload.length,
+              totalPages: action.payload.length ? 1 : 0 }
+          : action.payload;
       })
       .addCase(getAllFlightSchedules.rejected, (state, action) => {
         state.loading = false;
@@ -168,7 +199,8 @@ const flightScheduleSlice = createSlice({
 
     // Global error matcher
     builder.addMatcher(
-      (action) => action.type.startsWith("flightSchedule/") && action.type.endsWith("/rejected"),
+      (action) => action.type.startsWith("flightSchedule/") && action.type.endsWith("/rejected")
+        && action.type !== getFlightSchedulePage.rejected.type,
       (state, action) => {
         state.error = action.payload;
       }

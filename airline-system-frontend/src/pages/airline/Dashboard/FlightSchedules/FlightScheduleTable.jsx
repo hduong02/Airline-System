@@ -1,27 +1,22 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  Search,
-  Filter,
   Calendar,
   Eye,
   Edit,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
   Plane,
   MapPin,
   Clock,
-  Users,
   Plus,
   RotateCcw,
   CheckCircle,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
-  getAllFlightSchedules,
+  getFlightSchedulePage,
   deleteFlightSchedule,
 } from "@/Redux/flightSchedule/flightScheduleThunk";
 
@@ -51,17 +46,31 @@ const tableRow = [
 const FlightScheduleTable = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { flightSchedules, loading } = useSelector(
-    (state) => state.flightSchedule || {}
+  const { managementPage, managementPageLoading, managementPageError } = useSelector(
+    state => state.flightSchedule
   );
-
-
+  const [query, setQuery] = useState({ page: 0, size: 20 });
+  const [revision, setRevision] = useState(0);
+  const [deletingId, setDeletingId] = useState(null);
+  const { page, size } = query;
+  const flightSchedules = managementPage?.content || [];
+  const total = managementPage?.totalElements || 0;
+  const totalPages = managementPage?.totalPages || 0;
+  const loading = managementPageLoading || (!managementPage && !managementPageError);
+  const busy = loading || deletingId !== null;
+  const refresh = () => setRevision(value => value + 1);
 
   useEffect(() => {
-    dispatch(getAllFlightSchedules());
-  }, [dispatch]);
+    const request = dispatch(getFlightSchedulePage({ page, size }));
+    return () => request.abort();
+  }, [dispatch, page, size, revision]);
 
- 
+  useEffect(() => {
+    if (!managementPageLoading && !managementPageError && managementPage?.number === page
+        && page > 0 && page >= totalPages) {
+      setQuery(value => ({ ...value, page: Math.max(0, totalPages - 1) }));
+    }
+  }, [managementPageLoading, managementPageError, managementPage?.number, page, totalPages]);
 
   const getStatusBadge = (isActive) => (
    
@@ -115,21 +124,22 @@ const FlightScheduleTable = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  const handleDelete = async (scheduleId) => {
-    if (
-      window.confirm("Are you sure you want to delete this flight schedule?")
-    ) {
-      try {
-        await dispatch(deleteFlightSchedule(scheduleId));
-        dispatch(getAllFlightSchedules());
-      } catch (error) {
-        console.error("Error deleting schedule:", error);
-      }
+  const handleDelete = async scheduleId => {
+    if (deletingId !== null || !window.confirm("Are you sure you want to delete this flight schedule?")) return;
+    setDeletingId(scheduleId);
+    try {
+      await dispatch(deleteFlightSchedule(scheduleId)).unwrap();
+      refresh();
+      toast.success("Flight schedule deleted successfully");
+    } catch (error) {
+      toast.error(error || "Failed to delete flight schedule");
+    } finally {
+      setDeletingId(null);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={busy}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -150,11 +160,18 @@ const FlightScheduleTable = () => {
       </div>
 
 
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="outline" disabled={busy} onClick={refresh}>Refresh</Button>
+        <Select value={String(size)} disabled={busy} onValueChange={value => setQuery({ page: 0, size: Number(value) })}>
+          <SelectTrigger className="w-40" aria-label="Schedules per page"><SelectValue /></SelectTrigger>
+          <SelectContent>{[10, 20, 50, 100].map(value => <SelectItem key={value} value={String(value)}>{value} per page</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
       {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Flight Schedules ({flightSchedules.length})</span>
+            <span>Flight Schedules ({loading || managementPageError ? "…" : total})</span>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               {new Date().toLocaleDateString("en-IN")}
@@ -169,13 +186,11 @@ const FlightScheduleTable = () => {
                   {tableRow.map((head, idx) => (
                     <TableHead
                       key={idx}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="hover:bg-muted/50"
                     >
                       <div className="flex items-center gap-2">
                         {head}
-                        {head !== "Actions" && (
-                          <ArrowUpDown className="h-4 w-4" />
-                        )}
+
                       </div>
                     </TableHead>
                   ))}
@@ -184,17 +199,21 @@ const FlightScheduleTable = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2" />
                         Loading schedules...
                       </div>
                     </TableCell>
                   </TableRow>
+                ) : managementPageError ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8">
+                    <div role="alert">{managementPageError} <Button onClick={refresh}>Retry</Button></div>
+                  </TableCell></TableRow>
                 ) : flightSchedules.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No flight schedules found
@@ -264,6 +283,7 @@ const FlightScheduleTable = () => {
                       <TableCell className="text-right">
                         <div className="flex-col items-center justify-end gap-2">
                           <Button
+                            disabled={busy}
                             variant="ghost"
                             size="sm"
                             onClick={() =>
@@ -275,6 +295,7 @@ const FlightScheduleTable = () => {
                             View
                           </Button>
                           <Button
+                            disabled={busy}
                             variant="ghost"
                             size="sm"
                             onClick={() =>
@@ -286,6 +307,7 @@ const FlightScheduleTable = () => {
                             Edit
                           </Button>
                           <Button
+                            disabled={busy}
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(schedule.id)}
@@ -303,7 +325,14 @@ const FlightScheduleTable = () => {
             </Table>
           </div>
 
-          
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+            <p aria-live="polite">{loading || managementPageError ? '' : `${total === 0 ? 0 : page * size + 1}–${Math.min(page * size + flightSchedules.length, total)} of ${total} schedules`}</p>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" disabled={busy || page === 0} onClick={() => setQuery(value => ({ ...value, page: value.page - 1 }))}>Previous</Button>
+              <span>Page {totalPages === 0 ? 1 : page + 1} of {Math.max(1, totalPages)}</span>
+              <Button variant="outline" disabled={busy || !!managementPageError || page + 1 >= totalPages} onClick={() => setQuery(value => ({ ...value, page: value.page + 1 }))}>Next</Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

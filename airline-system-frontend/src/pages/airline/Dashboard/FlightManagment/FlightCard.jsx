@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, TrendingUp, Eye, Trash2, Edit, Users, Clock, Plane, Building2 } from "lucide-react";
 import React from "react";
 
-const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
+const FlightCard = ({ flight, onEdit, onDelete, onView, disabled = false }) => {
   // An absent summary price does not establish whether separate fares exist.
   const hasStartingFare = Number.isFinite(flight.lowestPrice) && flight.lowestPrice >= 0;
   // Calculate available seats
@@ -175,15 +175,16 @@ const FlightCard = ({ flight, onEdit, onDelete, onView }) => {
           Last modified: {new Date(flight.updatedAt).toLocaleDateString()}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onEdit(flight)}>
+          <Button variant="outline" size="sm" disabled={disabled} onClick={() => onEdit(flight)}>
             <Edit className="h-3 w-3 mr-1" />
             Edit
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onView?.(flight)}>
+          <Button variant="outline" size="sm" disabled={disabled} onClick={() => onView?.(flight)}>
             <Eye className="h-3 w-3 mr-1" />
             View
           </Button>
           <Button
+            disabled={disabled}
             variant="outline"
             size="sm"
             onClick={() => onDelete(flight.id)}

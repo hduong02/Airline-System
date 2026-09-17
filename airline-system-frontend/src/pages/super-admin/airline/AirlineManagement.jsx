@@ -2,25 +2,12 @@ import * as React from "react"
 import { useDispatch, useSelector } from "react-redux"
 import {
   Building2,
-  Plus,
   Search,
-  Filter,
   CheckCircle,
   XCircle,
   Clock,
   AlertTriangle,
-  Eye,
   Edit,
-  Ban,
-  UserCheck,
-  DollarSign,
-  FileText,
-  Phone,
-  Mail,
-  Globe,
-  MapPin,
-  Users,
-  Plane,
   Download,
   Upload
 } from "lucide-react"
@@ -45,45 +32,43 @@ import AirlineCard from "./AirineCard"
 const AirlineManagement = ({ activeSection }) => {
   const dispatch = useDispatch()
 
-  // Redux state
-  const { airlines, loading, error } = useSelector(state => state.airline)
-
-  // Local state
-  const [filteredAirlines, setFilteredAirlines] = React.useState([])
+  const { paginatedAirlines, listLoading, listError, loading: mutationLoading } = useSelector(state => state.airline)
+  const airlines = paginatedAirlines.content || []
+  const [query, setQuery] = React.useState({ search: "", status: "all", page: 0, size: 20, section: activeSection })
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
-  const [complianceFilter, setComplianceFilter] = React.useState("all")
+  const [revision, setRevision] = React.useState(0)
+  // Reset atomically when switching sections, before requesting the new section.
+  const current = query.section === activeSection ? query : { ...query, section: activeSection, page: 0, status: "all", search: "" }
+  if (query.section !== activeSection) {
+    setQuery(current)
+    setSearchQuery("")
+  }
+  const { page, size } = current
+  const statusFilter = current.status
+  const sectionStatus = activeSection === "airlines-pending" ? "INACTIVE"
+    : activeSection === "airlines-suspended" ? "BANNED"
+    : activeSection === "airlines-commission" ? "ACTIVE" : undefined
+  const status = sectionStatus || (statusFilter === "all" ? undefined : statusFilter.toUpperCase())
+  const busy = listLoading || mutationLoading
+  const total = paginatedAirlines.totalElements || 0
+  const totalPages = paginatedAirlines.totalPages || 0
+  const refresh = () => setRevision(value => value + 1)
 
-
-  // Load airlines on mount
   React.useEffect(() => {
-    dispatch(getAllAirlines({ page: 0, size: 100 }))
-  }, [dispatch])
+    const timer = setTimeout(() => setQuery(value => ({ ...value, search: searchQuery.trim(), page: 0 })), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
-  // Filter airlines
   React.useEffect(() => {
-    if (!airlines || airlines.length === 0) {
-      setFilteredAirlines([])
-      return
+    const request = dispatch(getAllAirlines({ page, size, search: current.search || undefined, status, sort: "name,asc" }))
+    return () => request.abort()
+  }, [dispatch, page, size, current.search, status, activeSection, revision])
+
+  React.useEffect(() => {
+    if (!listLoading && !listError && page > 0 && paginatedAirlines.number === page && page >= totalPages) {
+      setQuery(value => ({ ...value, page: Math.max(0, totalPages - 1) }))
     }
-
-    let filtered = [...airlines]
-
-    if (searchQuery) {
-      filtered = filtered.filter(airline =>
-        airline.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        airline.iataCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        airline.icaoCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        airline.country?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(airline => airline.status?.toLowerCase() === statusFilter.toLowerCase())
-    }
-
-    setFilteredAirlines(filtered)
-  }, [airlines, searchQuery, statusFilter, complianceFilter])
+  }, [listLoading, listError, page, paginatedAirlines.number, totalPages])
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -104,7 +89,7 @@ const AirlineManagement = ({ activeSection }) => {
     )
   }
 
-  const getComplianceBadge = (airline) => {
+  const getComplianceBadge = () => {
     // For now, return a default badge since compliance data structure may differ
     return <Badge className="bg-green-100 text-green-800">Compliant</Badge>
   }
@@ -112,6 +97,7 @@ const AirlineManagement = ({ activeSection }) => {
   const handleApprove = async (airlineId) => {
     try {
       await dispatch(approveAirline(airlineId)).unwrap()
+      refresh()
       toast.success("Airline approved successfully")
     } catch (err) {
       toast.error(err || "Failed to approve airline")
@@ -122,6 +108,7 @@ const AirlineManagement = ({ activeSection }) => {
     if (window.confirm("Are you sure you want to reject this airline application?")) {
       try {
         await dispatch(deleteAirline(airlineId)).unwrap()
+        refresh()
         toast.success("Airline rejected and deleted successfully")
       } catch (err) {
         toast.error(err || "Failed to reject airline")
@@ -133,6 +120,7 @@ const AirlineManagement = ({ activeSection }) => {
     if (window.confirm("Are you sure you want to suspend this airline?")) {
       try {
         await dispatch(suspendAirline(airlineId)).unwrap()
+        refresh()
         toast.success("Airline suspended successfully")
       } catch (err) {
         toast.error(err || "Failed to suspend airline")
@@ -144,6 +132,7 @@ const AirlineManagement = ({ activeSection }) => {
     if (window.confirm("Are you sure you want to ban this airline?")) {
       try {
         await dispatch(banAirline(airlineId)).unwrap()
+        refresh()
         toast.success("Airline banned successfully")
       } catch (err) {
         toast.error(err || "Failed to ban airline")
@@ -154,24 +143,26 @@ const AirlineManagement = ({ activeSection }) => {
  
 
   const renderContent = () => {
+    if ((listLoading || listError) && ["airlines-pending", "airlines-suspended", "airlines-compliance", "airlines-commission"].includes(activeSection)) return null
     switch (activeSection) {
       case "airlines-list":
-        return <AirlinesList />
+        return AirlinesList()
       case "airlines-pending":
-        return <PendingAirlines />
+        return PendingAirlines()
       case "airlines-suspended":
-        return <SuspendedAirlines />
+        return SuspendedAirlines()
       case "airlines-compliance":
-        return <ComplianceOverview />
+        return ComplianceOverview()
       case "airlines-commission":
-        return <CommissionRules />
+        return CommissionRules()
       default:
-        return <AirlinesOverview />
+        return AirlinesOverview()
     }
   }
 
+  // These render helpers contain no hooks; calling them keeps the search input mounted.
   const AirlinesOverview = () => {
-    const totalAirlines = airlines?.length || 0
+    const totalAirlines = total
     const activeAirlines = airlines?.filter(a => a.status === "ACTIVE")?.length || 0
     const inactiveAirlines = airlines?.filter(a => a.status === "INACTIVE")?.length || 0
     const bannedAirlines = airlines?.filter(a => a.status === "BANNED")?.length || 0
@@ -183,7 +174,7 @@ const AirlineManagement = ({ activeSection }) => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Airlines</p>
+                  <p className="text-sm text-gray-600">Matching Airlines</p>
                   <p className="text-2xl font-bold text-gray-900">{totalAirlines}</p>
                 </div>
                 <Building2 className="h-8 w-8 text-blue-600" />
@@ -194,7 +185,7 @@ const AirlineManagement = ({ activeSection }) => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Active Airlines</p>
+                  <p className="text-sm text-gray-600">Active on this page</p>
                   <p className="text-2xl font-bold text-green-600">{activeAirlines}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -205,7 +196,7 @@ const AirlineManagement = ({ activeSection }) => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Inactive</p>
+                  <p className="text-sm text-gray-600">Inactive on this page</p>
                   <p className="text-2xl font-bold text-yellow-600">{inactiveAirlines}</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-600" />
@@ -216,7 +207,7 @@ const AirlineManagement = ({ activeSection }) => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Banned</p>
+                  <p className="text-sm text-gray-600">Banned on this page</p>
                   <p className="text-2xl font-bold text-red-600">{bannedAirlines}</p>
                 </div>
                 <XCircle className="h-8 w-8 text-red-600" />
@@ -225,7 +216,7 @@ const AirlineManagement = ({ activeSection }) => {
           </Card>
         </div>
 
-        <AirlinesList />
+        {AirlinesList()}
       </div>
     )
   }
@@ -258,7 +249,7 @@ const AirlineManagement = ({ activeSection }) => {
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={status => setQuery(value => ({ ...value, status, page: 0 }))}>
             <SelectTrigger>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -273,22 +264,22 @@ const AirlineManagement = ({ activeSection }) => {
           
         </div>
 
-        {loading ? (
+        {listLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             <p className="mt-2 text-gray-600">Loading airlines...</p>
           </div>
-        ) : error ? (
+        ) : listError ? (
           <div className="text-center py-12">
-            <p className="text-red-600">Error: {error}</p>
+            <p className="text-red-600">Airlines could not be loaded.</p>
           </div>
-        ) : filteredAirlines.length === 0 ? (
+        ) : airlines.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600">No airlines found</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredAirlines.map((airline) => (
+            {airlines.map((airline) => (
               <AirlineCard
                 key={airline.id}
                 airline={airline}
@@ -308,7 +299,7 @@ const AirlineManagement = ({ activeSection }) => {
   )
 
   const PendingAirlines = () => {
-    const pendingAirlines = airlines?.filter(a => a.status === "INACTIVE") || []
+    const pendingAirlines = airlines
 
     return (
       <Card>
@@ -342,7 +333,7 @@ const AirlineManagement = ({ activeSection }) => {
   }
 
   const SuspendedAirlines = () => {
-    const suspendedAirlines = airlines?.filter(a => a.status === "BANNED") || []
+    const suspendedAirlines = airlines
 
     return (
       <Card>
@@ -463,7 +454,28 @@ const AirlineManagement = ({ activeSection }) => {
     </Card>
   )
 
-  return <div className="space-y-6">{renderContent()}</div>
+  return (
+    <div className="space-y-6" aria-busy={busy}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="outline" disabled={busy} onClick={refresh}>Refresh</Button>
+        <Select value={String(size)} onValueChange={value => setQuery(previous => ({ ...previous, size: Number(value), page: 0 }))}>
+          <SelectTrigger className="w-40" aria-label="Airlines per page"><SelectValue /></SelectTrigger>
+          <SelectContent>{[10, 20, 50, 100].map(value => <SelectItem key={value} value={String(value)}>{value} per page</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      {listError && <div role="alert">{listError} <Button onClick={refresh}>Retry</Button></div>}
+      {listLoading && <p role="status">Loading airlines...</p>}
+      {renderContent()}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p aria-live="polite">{listLoading || listError ? "" : `${total === 0 ? 0 : page * size + 1}–${Math.min(page * size + airlines.length, total)} of ${total} airlines`}</p>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" disabled={busy || page === 0} onClick={() => setQuery(value => ({ ...value, page: value.page - 1 }))}>Previous</Button>
+          <span>Page {totalPages === 0 ? 1 : page + 1} of {Math.max(1, totalPages)}</span>
+          <Button variant="outline" disabled={busy || !!listError || page + 1 >= totalPages} onClick={() => setQuery(value => ({ ...value, page: value.page + 1 }))}>Next</Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 

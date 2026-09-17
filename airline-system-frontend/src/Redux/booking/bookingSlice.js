@@ -1,5 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
+  getTravelerBookingPage,
+  getAirlineBookingPage,
   createBooking,
   updateBooking,
   getBookingById,
@@ -27,6 +29,14 @@ import {
 } from "./bookingThunk.js";
 
 const initialState = {
+  travelerBookingPage: { content: [], totalElements: 0, totalPages: 0 },
+  travelerBookingPageLoading: false,
+  travelerBookingPageError: null,
+  travelerBookingPageRequestId: null,
+  airlineBookingPage: { content: [], totalElements: 0, totalPages: 0 },
+  airlineBookingPageLoading: false,
+  airlineBookingPageError: null,
+  airlineBookingPageRequestId: null,
   bookings: [],
   // Preserve the complete owner list when the booking table applies filters.
   ownerBookings: [],
@@ -164,6 +174,23 @@ const bookingSlice = createSlice({
     });
 
     // ---------- GET BY AIRLINE ----------
+    builder.addCase(getAirlineBookingPage.pending, (state, action) => {
+      state.airlineBookingPageRequestId = action.meta.requestId;
+      state.airlineBookingPageLoading = true;
+      state.airlineBookingPageError = null;
+    });
+    builder.addCase(getAirlineBookingPage.fulfilled, (state, action) => {
+      if (state.airlineBookingPageRequestId !== action.meta.requestId) return;
+      state.airlineBookingPage = action.payload;
+      state.airlineBookingPageLoading = false;
+      state.airlineBookingPageRequestId = null;
+    });
+    builder.addCase(getAirlineBookingPage.rejected, (state, action) => {
+      if (state.airlineBookingPageRequestId !== action.meta.requestId) return;
+      state.airlineBookingPageLoading = false;
+      state.airlineBookingPageRequestId = null;
+      state.airlineBookingPageError = action.meta.aborted ? null : action.payload || action.error.message;
+    });
     builder.addCase(getBookingsByAirline.pending, (state, action) => {
       const filters = action.meta.arg || {};
       if (!filters.search && (!filters.status || filters.status === 'all') && !filters.flightInstanceId) {
@@ -196,6 +223,23 @@ const bookingSlice = createSlice({
     });
 
     // ---------- GET BY USER ----------
+    builder.addCase(getTravelerBookingPage.pending, (state, action) => {
+      state.travelerBookingPageRequestId = action.meta.requestId;
+      state.travelerBookingPageLoading = true;
+      state.travelerBookingPageError = null;
+    });
+    builder.addCase(getTravelerBookingPage.fulfilled, (state, action) => {
+      if (state.travelerBookingPageRequestId !== action.meta.requestId) return;
+      state.travelerBookingPage = action.payload;
+      state.travelerBookingPageLoading = false;
+      state.travelerBookingPageRequestId = null;
+    });
+    builder.addCase(getTravelerBookingPage.rejected, (state, action) => {
+      if (state.travelerBookingPageRequestId !== action.meta.requestId) return;
+      state.travelerBookingPageLoading = false;
+      state.travelerBookingPageRequestId = null;
+      state.travelerBookingPageError = action.meta.aborted ? null : action.payload || action.error.message;
+    });
     builder.addCase(getBookingsByUser.pending, (state) => {
       console.log("⏳ getBookingsByUser pending");
       state.loading = true;

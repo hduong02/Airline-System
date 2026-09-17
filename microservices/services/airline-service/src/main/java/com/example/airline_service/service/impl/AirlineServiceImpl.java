@@ -55,9 +55,10 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     @Override
-    public Page<AirlineResponse> getAllAirlines(Pageable pageable) {
-        return airlineRepository
-                .findAll(pageable).map(AirlineMapper::toResponse);
+    public Page<AirlineResponse> getAllAirlines(Pageable pageable, String search, AirlineStatus status) {
+        return airlineRepository.findAll(
+                com.example.airline_service.repository.AirlineSpecifications.matching(search, status), pageable)
+                .map(AirlineMapper::toResponse);
     }
 
     @Override

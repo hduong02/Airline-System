@@ -1,6 +1,8 @@
 package com.example.booking_service.repository;
 
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +17,35 @@ import java.time.Instant;
 import jakarta.persistence.LockModeType;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    Page<Booking> findByUserId(Long userId, Pageable pageable);
+    Page<Booking> findByUserIdAndStatus(Long userId, BookingStatus status, Pageable pageable);
+
+    @Query("SELECT DISTINCT b.flightInstanceId FROM Booking b WHERE b.userId = :userId AND b.status <> :excluded")
+    List<Long> findHistoryFlightIds(@Param("userId") Long userId, @Param("excluded") BookingStatus excluded);
+
+    @Query("SELECT b FROM Booking b WHERE b.userId = :userId AND b.status <> :excluded AND b.flightInstanceId IN :ids")
+    Page<Booking> findHistoryByFlightIds(@Param("userId") Long userId, @Param("excluded") BookingStatus excluded,
+            @Param("ids") List<Long> ids, Pageable pageable);
+
+    // EXISTS avoids duplicate bookings and collection fetch joins, so LIMIT/OFFSET
+    // and the count both run in the database even when several passengers match.
+    @Query("""
+            SELECT b FROM Booking b WHERE b.airlineId = :airlineId
+            AND (:search IS NULL OR
+              LOWER(b.bookingReference) LIKE LOWER(CONCAT('%', :search, '%')) OR
+              LOWER(b.contactInfo.email) LIKE LOWER(CONCAT('%', :search, '%')) OR
+              LOWER(b.contactInfo.phone) LIKE LOWER(CONCAT('%', :search, '%')) OR
+              EXISTS (SELECT p.id FROM Passenger p WHERE p.booking = b AND (
+                LOWER(p.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                LOWER(p.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')))))
+            AND (:status IS NULL OR b.status = :status)
+            AND (:flightInstanceId IS NULL OR b.flightInstanceId = :flightInstanceId)
+            """)
+    Page<Booking> findAirlinePage(@Param("airlineId") Long airlineId,
+            @Param("search") String search, @Param("status") BookingStatus status,
+            @Param("flightInstanceId") Long flightInstanceId, Pageable pageable);
 
     interface StatisticsRow {
         Long getId();

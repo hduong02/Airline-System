@@ -14,6 +14,14 @@ import java.time.LocalDateTime;
 public interface FlightInstanceRepository extends
         JpaRepository<FlightInstance, Long>, JpaSpecificationExecutor<FlightInstance> {
 
+    @Query("""
+            SELECT fi.id FROM FlightInstance fi WHERE fi.id IN :ids
+            AND ((:upcoming = true AND fi.departureDateTime > :boundary)
+              OR (:upcoming = false AND fi.departureDateTime <= :boundary))
+            """)
+    java.util.List<Long> findIdsByDepartureWindow(@Param("ids") java.util.List<Long> ids,
+            @Param("boundary") LocalDateTime boundary, @Param("upcoming") boolean upcoming);
+
     @Query("SELECT fi FROM FlightInstance fi WHERE fi.airlineId = :airlineId" +
             " AND (:departureAirportId IS NULL OR fi.departureAirportId = :departureAirportId)" +
             " AND (:arrivalAirportId IS NULL OR fi.arrivalAirportId = :arrivalAirportId)" +

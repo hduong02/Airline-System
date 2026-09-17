@@ -101,3 +101,24 @@ export const getFlightsByAircraft = createAsyncThunk(
   }
 );
 
+
+// The management screen fetches one page without replacing shared dropdown data.
+export const getFlightManagementPage = createAsyncThunk(
+  "flight/getManagementPage",
+  async (params = {}, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get(`${API_URL}/airline`, {
+        headers: getHeaders(), signal,
+        params: { page: 0, size: 20, sort: "id,asc", ...params },
+      });
+      const page = res.data;
+      if (!Array.isArray(page?.content) || !Number.isInteger(page?.number)
+          || !Number.isInteger(page?.totalElements) || !Number.isInteger(page?.totalPages)) {
+        throw new Error("Invalid flight page response");
+      }
+      return page;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch flights");
+    }
+  }
+);

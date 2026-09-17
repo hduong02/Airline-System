@@ -16,7 +16,7 @@ public interface AirlineService {
     AirlineResponse createAirline(AirlineRequest request, Long ownerId);
     AirlineResponse getAirlineByOwner(Long ownerId) throws Exception;
     AirlineResponse getAirlineById(Long id) throws Exception;
-    Page<AirlineResponse> getAllAirlines(Pageable pageable);
+    Page<AirlineResponse> getAllAirlines(Pageable pageable, String search, AirlineStatus status);
     AirlineResponse updateAirline(AirlineRequest request, Long ownerId) throws Exception;
     void deleteAirline(Long id, Long ownerId) throws Exception;
 

@@ -1,5 +1,8 @@
 package com.example.booking_service.service.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +32,7 @@ import com.example.event.BookingCancelledEvent;
 import com.example.enums.PaymentGateway;
 import com.example.payload.dto.PaymentDto;
 import com.example.payload.request.BookingRequest;
+import com.example.payload.request.FlightDepartureFilterRequest;
 import com.example.payload.request.PassengerRequest;
 import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.response.AirlineResponse;
@@ -46,6 +50,7 @@ import org.springframework.data.domain.Sort;
 
 import java.util.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.stream.Collectors;
 
@@ -65,6 +70,64 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentClient paymentClient;
     private final AirlineClient airlineClient;
     private final ApplicationEventPublisher applicationEventPublisher;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getTravelerBookingPage(Long userId, String tab, int page, int size) {
+        if (page < 0 || size < 1 || size > 100 ||
+                !Set.of("all", "upcoming", "past", "cancelled").contains(tab)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Use page >= 0, size between 1 and 100, and tab all, upcoming, past or cancelled");
+        }
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "bookingDate", "id"));
+        var now = LocalDateTime.now();
+        Page<Booking> bookings;
+        if ("all".equals(tab)) {
+            bookings = bookingRepository.findByUserId(userId, pageable);
+        } else if ("cancelled".equals(tab)) {
+            bookings = bookingRepository.findByUserIdAndStatus(userId, BookingStatus.CANCELLED, pageable);
+        } else {
+            // Only IDs cross the service boundary; full booking details are enriched
+            // after the database selects this page. Use live flight dates after reschedules.
+            var candidates = bookingRepository.findHistoryFlightIds(userId, BookingStatus.CANCELLED);
+            var matchingIds = new ArrayList<Long>();
+            for (int start = 0; start < candidates.size(); start += 100) {
+                matchingIds.addAll(flightClient.filterDepartures(
+                        new FlightDepartureFilterRequest(
+                                candidates.subList(start, Math.min(start + 100, candidates.size())),
+                                now, "upcoming".equals(tab))));
+            }
+            bookings = matchingIds.isEmpty() ? Page.empty(pageable) :
+                    bookingRepository.findHistoryByFlightIds(userId, BookingStatus.CANCELLED, matchingIds, pageable);
+        }
+        var responses = convertToBookingResponses(bookings.getContent());
+        for (var response : responses) {
+            boolean active = response.getStatus() != BookingStatus.CANCELLED && response.getDepartureTime() != null;
+            response.setIsUpcoming(active && response.getDepartureTime().isAfter(now));
+            response.setIsPast(active && !response.getDepartureTime().isAfter(now));
+        }
+        return new PageImpl<>(responses, pageable, bookings.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getAirlineBookingPage(
+            Long userId, String search, BookingStatus status, Long flightInstanceId,
+            String sortDirection, int page, int size) {
+        if (page < 0 || size < 1 || size > 100 ||
+                !("ASC".equalsIgnoreCase(sortDirection) || "DESC".equalsIgnoreCase(sortDirection))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Use page >= 0, size between 1 and 100, and sortDirection ASC or DESC");
+        }
+        var airline = airlineClient.getAirlineByOwner(userId);
+        var direction = Sort.Direction.fromString(sortDirection);
+        var pageable = PageRequest.of(page, size,
+                Sort.by(direction, "bookingDate", "id"));
+        var bookings = bookingRepository.findAirlinePage(airline.getId(),
+                search == null || search.isBlank() ? null : search.trim(), status, flightInstanceId, pageable);
+        return new PageImpl<>(
+                convertToBookingResponses(bookings.getContent()), pageable, bookings.getTotalElements());
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

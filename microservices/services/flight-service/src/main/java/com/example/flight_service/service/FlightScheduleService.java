@@ -1,5 +1,7 @@
 package com.example.flight_service.service;
 
+import org.springframework.data.domain.Page;
+
 import com.example.payload.response.FlightScheduleResponse;
 import com.example.payload.request.FlightScheduleRequest;
 
@@ -13,6 +15,9 @@ public interface FlightScheduleService {
     FlightScheduleResponse getFlightScheduleById(Long id) throws Exception;
 
     List<FlightScheduleResponse> getFlightScheduleByAirline(Long userId);
+
+    Page<FlightScheduleResponse> getFlightSchedulePage(
+            Long userId, int page, int size);
 
     FlightScheduleResponse updateFlightSchedule(Long id,
             FlightScheduleRequest request) throws Exception;

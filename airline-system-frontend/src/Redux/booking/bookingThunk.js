@@ -5,6 +5,43 @@ import { getHeaders } from "@/utils/getHeaders";
 
 const API_URL = "/api/bookings";
 
+export const getTravelerBookingPage = createAsyncThunk(
+  "booking/getTravelerPage",
+  async (params = {}, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get(`${API_URL}/user/history/page`, {
+        headers: getHeaders(), signal, params: { page: 0, size: 10, tab: "all", ...params },
+      });
+      if (!Array.isArray(res.data?.content) || !Number.isInteger(res.data.totalElements) ||
+          !Number.isInteger(res.data.totalPages)) {
+        return rejectWithValue("Unable to load bookings: invalid page response");
+      }
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to load booking history");
+    }
+  }
+);
+
+// The management table owns its page separately from dashboard and traveler lists.
+export const getAirlineBookingPage = createAsyncThunk(
+  "booking/getAirlinePage",
+  async (params = {}, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get(`${API_URL}/airline/page`, {
+        headers: getHeaders(), signal, params: { page: 0, size: 20, ...params },
+      });
+      if (!Array.isArray(res.data?.content) || !Number.isInteger(res.data.totalElements) ||
+          !Number.isInteger(res.data.totalPages)) {
+        return rejectWithValue("Unable to load bookings: invalid page response");
+      }
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to fetch airline bookings");
+    }
+  }
+);
+
 // ---------- CREATE ----------
 export const createBooking = createAsyncThunk(
   "booking/create",

@@ -63,24 +63,23 @@ export const getAirlinesForDropdown = createAsyncThunk(
 // ✅ Get All Airlines
 export const getAllAirlines = createAsyncThunk(
   "airline/getAll",
-  async (params, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get("/api/airlines", { 
-        params,
-        headers: getHeaders()
+      const res = await api.get("/api/airlines", {
+        params, signal, headers: getHeaders()
       });
-      console.log("Get all airlines success:", res.data);
+      if (!Array.isArray(res.data?.content) || !Number.isInteger(res.data?.totalElements)
+          || !Number.isInteger(res.data?.totalPages) || !Number.isInteger(res.data?.number)) {
+        throw new Error("Invalid airline page response");
+      }
       return res.data;
     } catch (err) {
-      console.error("Get all airlines error:", err);
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch airlines"
-      );
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch airlines");
     }
   }
 );
 
-// ✅ Update Airline
+// Update Airline
 export const updateAirline = createAsyncThunk(
   "airline/update",
   async (airlineData, { rejectWithValue }) => {

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getBookingsByAirline } from "@/Redux/booking/bookingThunk";
+import { getAirlineBookingPage } from "@/Redux/booking/bookingThunk";
 import {
   getAllFlightInstances
 } from "@/Redux/flightInstance/flightInstanceThunk";
@@ -43,42 +43,53 @@ import BookingDetails from "./BookingDetails";
 const BookingManagement = () => {
   const dispatch = useDispatch();
   const {
-    bookings: apiBookings,
-    loading,
-    error,
+    airlineBookingPage: bookingPage,
+    airlineBookingPageLoading: loading,
+    airlineBookingPageError: error,
   } = useSelector((store) => store.booking);
   
   const { paginatedFlightInstances, loading: flightInstancesLoading } = useSelector(
       (store) => store.flightInstance,
     );
 
+  const [query, setQuery] = React.useState({
+    search: "", status: "all", flightInstanceId: "all", sortDirection: "DESC", page: 0, size: 20,
+  });
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("all");
-  const [flightInstanceId, setFlightInstanceId] = React.useState("all");
-  const [sortDirection, setSortDirection] = React.useState("DESC");
+  const { status: statusFilter, flightInstanceId, sortDirection, page, size } = query;
+  const changeFilter = (key, value) => setQuery(previous => ({ ...previous, [key]: value, page: 0 }));
   const [selectedBooking, setSelectedBooking] = React.useState(null);
   const [showBookingDetails, setShowBookingDetails] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
-
-  const flightInstances=paginatedFlightInstances?.content || []
-
-  // Fetch flight instances for the dropdown once on mount
+  const flightInstances = paginatedFlightInstances?.content || [];
+  React.useEffect(() => { dispatch(getAllFlightInstances()); }, [dispatch]);
   React.useEffect(() => {
-    dispatch(getAllFlightInstances());
-  }, [dispatch]);
+    const timer = setTimeout(() => {
+      setQuery(previous => previous.search === searchQuery.trim() ? previous : ({ ...previous, search: searchQuery.trim(), page: 0 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   React.useEffect(() => {
-    const filters = {
-      search: searchQuery || undefined,
-      status: statusFilter !== "all" ? statusFilter.toUpperCase() : undefined,
-      flightInstanceId:
-        flightInstanceId !== "all" ? flightInstanceId : undefined,
-      sortDirection,
-    };
-    dispatch(getBookingsByAirline(filters));
-  }, [dispatch, searchQuery, statusFilter, flightInstanceId, sortDirection]);
+    const request = dispatch(getAirlineBookingPage({
+      page: query.page, size: query.size, search: query.search || undefined,
+      status: query.status === "all" ? undefined : query.status.toUpperCase(),
+      flightInstanceId: query.flightInstanceId === "all" ? undefined : query.flightInstanceId,
+      sortDirection: query.sortDirection,
+    }));
+    return () => request.abort();
+  }, [dispatch, query, refreshKey]);
 
-  const bookings = apiBookings || [];
+  const bookings = bookingPage?.content || [];
+  const totalElements = bookingPage?.totalElements || 0;
+  const totalPages = bookingPage?.totalPages || 0;
+  React.useEffect(() => {
+    if (!loading && !error && bookingPage?.number === page && page > 0 && page >= totalPages) {
+      setQuery(previous => ({ ...previous, page: Math.max(0, totalPages - 1) }));
+    }
+  }, [loading, error, bookingPage, page, totalPages]);
+  const refresh = () => setRefreshKey(previous => previous + 1);
 
   const formatTime = (dt) =>
     new Date(dt).toLocaleTimeString("en-US", {
@@ -137,7 +148,7 @@ const BookingManagement = () => {
   };
 
   const bookingStats = {
-    total: bookings.length,
+    total: totalElements,
     confirmed: bookings.filter((b) => b.status === "CONFIRMED").length,
     pending: bookings.filter((b) => b.status === "PENDING").length,
     cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
@@ -145,31 +156,6 @@ const BookingManagement = () => {
       .filter((b) => b.payment)
       .reduce((sum, b) => sum + (b.totalAmount || 0), 0),
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-600">Loading bookings...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => dispatch(getBookingsByAirline())}>
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -185,7 +171,8 @@ const BookingManagement = () => {
         </div>
         <Button
           variant="outline"
-          onClick={() => dispatch(getBookingsByAirline())}
+          onClick={refresh}
+          disabled={loading}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -200,7 +187,7 @@ const BookingManagement = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Bookings</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {bookingStats.total}
+                  {loading || error ? "-" : bookingStats.total}
                 </p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
@@ -211,9 +198,9 @@ const BookingManagement = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Confirmed</p>
+                <p className="text-sm text-gray-600">Confirmed on this page</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {bookingStats.confirmed}
+                  {loading || error ? "-" : bookingStats.confirmed}
                 </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -224,9 +211,9 @@ const BookingManagement = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-sm text-gray-600">Pending on this page</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {bookingStats.pending}
+                  {loading || error ? "-" : bookingStats.pending}
                 </p>
               </div>
               <AlertCircle className="h-8 w-8 text-yellow-600" />
@@ -237,9 +224,9 @@ const BookingManagement = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Revenue</p>
+                <p className="text-sm text-gray-600">Revenue on this page</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  ${(bookingStats.totalRevenue / 100000).toFixed(1)}L
+                  {loading || error ? "-" : `$${(bookingStats.totalRevenue / 100000).toFixed(1)}L`}
                 </p>
               </div>
               <CreditCard className="h-8 w-8 text-purple-600" />
@@ -267,7 +254,7 @@ const BookingManagement = () => {
             </div>
 
             {/* Status filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={value => changeFilter("status", value)}>
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
@@ -282,7 +269,7 @@ const BookingManagement = () => {
             {/* Flight Instance filter */}
             <Select
               value={flightInstanceId}
-              onValueChange={setFlightInstanceId}
+              onValueChange={value => changeFilter("flightInstanceId", value)}
             >
               <SelectTrigger className="w-full sm:w-56">
                 <Plane className="h-3.5 w-3.5 mr-1 text-gray-500 shrink-0" />
@@ -312,7 +299,7 @@ const BookingManagement = () => {
             </Select>
 
             {/* Sort direction */}
-            <Select value={sortDirection} onValueChange={setSortDirection}>
+            <Select value={sortDirection} onValueChange={value => changeFilter("sortDirection", value)}>
               <SelectTrigger className="w-full sm:w-36">
                 <SortAsc className="h-3.5 w-3.5 mr-1 text-gray-500 shrink-0" />
                 <SelectValue />
@@ -330,7 +317,11 @@ const BookingManagement = () => {
           </div>
 
           {/* Table */}
-          {bookings.length === 0 ? (
+          {loading ? (
+            <div role="status" className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />Loading bookings...</div>
+          ) : error ? (
+            <div role="alert" className="text-center py-12"><p className="text-red-600 mb-4">{error}</p><Button onClick={refresh}>Retry</Button></div>
+          ) : bookings.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -482,6 +473,20 @@ const BookingManagement = () => {
               </Table>
             </div>
           )}
+          <nav aria-label="Booking pagination" className="flex flex-wrap items-center justify-between gap-3 mt-4">
+            <span className="text-sm text-gray-600" aria-live="polite">
+              {loading ? "Loading..." : error ? "Unable to load bookings" : `Showing ${bookings.length ? page * size + 1 : 0}–${Math.min(page * size + bookings.length, totalElements)} of ${totalElements} bookings`}
+            </span>
+            <div className="flex items-center gap-3">
+              <Select value={String(size)} onValueChange={value => changeFilter("size", Number(value))}>
+                <SelectTrigger className="w-32" aria-label="Bookings per page"><SelectValue /></SelectTrigger>
+                <SelectContent>{[10, 20, 50, 100].map(value => <SelectItem key={value} value={String(value)}>{value} per page</SelectItem>)}</SelectContent>
+              </Select>
+              <Button variant="outline" disabled={loading || page === 0} onClick={() => setQuery(previous => ({ ...previous, page: previous.page - 1 }))}>Previous</Button>
+              <span>Page {page + 1} of {Math.max(1, totalPages)}</span>
+              <Button variant="outline" disabled={loading || !!error || page + 1 >= totalPages} onClick={() => setQuery(previous => ({ ...previous, page: previous.page + 1 }))}>Next</Button>
+            </div>
+          </nav>
         </CardContent>
       </Card>
 

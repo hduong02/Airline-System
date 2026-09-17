@@ -61,10 +61,6 @@ const AirlineRoutes = ({
   flights,
   filteredFlights,
   dashboardStats,
-  statusFilter,
-  setStatusFilter,
-  routeFilter,
-  setRouteFilter,
  
   editingFlight,
 
@@ -129,14 +125,7 @@ const AirlineRoutes = ({
       <Route
         path="/flights"
         element={
-          <FlightManagement
-            flights={filteredFlights}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            routeFilter={routeFilter}
-            setRouteFilter={setRouteFilter}
-            
-          />
+          <FlightManagement />
         }
       />
 

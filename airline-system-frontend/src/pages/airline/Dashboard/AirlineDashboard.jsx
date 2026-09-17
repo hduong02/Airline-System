@@ -57,23 +57,36 @@ const AirlineDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false)
 
   // Existing flight management state
-  const { flights, flightPage, loading: flightsLoading, error: flightsError } = useSelector(state => state.flight)
+  const { flights, flightPage, loading: flightsLoading, error: flightsError, managementPage, managementPageLoading, managementPageError } = useSelector(state => state.flight)
   const fleet = useSelector(state => state.aircraft)
   const schedules = useSelector(state => state.flightSchedule)
   const booking = useSelector(state => state.booking)
 
 
-  const [statusFilter, setStatusFilter] = React.useState("all")
-  const [routeFilter, setRouteFilter] = React.useState("all")
 
 
 
-  // Load flights on component mount
+  const isFlightManagement = location.pathname.replace(/\/+$/, '') === '/airline/flights'
+
+  const isScheduleManagement = location.pathname.replace(/\/+$/, '') === '/airline/schedules'
+
+  // The flight list requests its own page; other consumers retain the shared list.
   React.useEffect(() => {
-    dispatch(getFlightsByAirline());
+    if (isFlightManagement) return
+    const request = dispatch(getFlightsByAirline())
+    return () => request?.abort?.()
+  }, [dispatch, isFlightManagement])
+
+  React.useEffect(() => {
     dispatch(listAllAircrafts());
-    dispatch(getAllFlightSchedules());
   }, [dispatch])
+
+  React.useEffect(() => {
+    if (isScheduleManagement) return
+    const request = dispatch(getAllFlightSchedules())
+    return () => request?.abort?.()
+  }, [dispatch, isScheduleManagement])
+
 
 
   React.useEffect(() => {
@@ -88,9 +101,13 @@ const AirlineDashboard = () => {
 
   const counts = {
     aircraft: fleet.fleetLoaded && !fleet.error ? fleet.aircrafts.length : null,
-    flights: !flightsLoading && !flightsError ? flightPage?.totalElements ?? null : null,
-    schedules: schedules.listLoaded && !schedules.error
-      ? schedules.paginatedFlightSchedules?.totalElements ?? schedules.flightSchedules.length : null,
+    flights: isFlightManagement
+      ? !managementPageLoading && !managementPageError ? managementPage?.totalElements ?? null : null
+      : !flightsLoading && !flightsError ? flightPage?.totalElements ?? null : null,
+    schedules: isScheduleManagement
+      ? !schedules.managementPageLoading && !schedules.managementPageError ? schedules.managementPage?.totalElements ?? null : null
+      : schedules.listLoaded && !schedules.error
+        ? schedules.paginatedFlightSchedules?.totalElements ?? schedules.flightSchedules.length : null,
     'bookings-list': booking.ownerBookingsStatus === 'succeeded' ? booking.ownerBookings.length : null,
   }
   const dashboardStats = {
@@ -359,13 +376,7 @@ const AirlineDashboard = () => {
 
         {/* Main Content */}
         <ScrollArea className="flex-1 p-6">
-          <AirlineRoutes
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            routeFilter={routeFilter}
-            setRouteFilter={setRouteFilter}
-
-          />
+          <AirlineRoutes />
         </ScrollArea>
       </div>
 

@@ -1,5 +1,6 @@
 package com.example.booking_service.controller;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -65,11 +66,33 @@ public class BookingController {
         return ResponseEntity.ok(responses);
     }
 
+    @GetMapping("/airline/page")
+    public ResponseEntity<Page<BookingResponse>> getAirlineBookingPage(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) Long flightInstanceId,
+            @RequestParam(defaultValue = "DESC") String sortDirection,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(bookingService.getAirlineBookingPage(
+                userId, search, status, flightInstanceId, sortDirection, page, size));
+    }
+
     @GetMapping("/user/history")
     public ResponseEntity<List<BookingResponse>> getBookingsByUser(
             @RequestHeader("X-User-Id") Long userId) {
         List<BookingResponse> responses = bookingService.getBookingsByUser(userId);
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/user/history/page")
+    public ResponseEntity<Page<BookingResponse>> getTravelerBookingPage(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(defaultValue = "all") String tab,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(bookingService.getTravelerBookingPage(userId, tab, page, size));
     }
 
     @PatchMapping("/{id}/cancel")

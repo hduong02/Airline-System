@@ -1,5 +1,8 @@
 package com.example.flight_service.controller;
 
+import org.springframework.data.domain.Page;
+import org.springframework.web.server.ResponseStatusException;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,6 +41,18 @@ public class FlightScheduleController {
         return ResponseEntity.ok(flightScheduleService.getFlightScheduleByAirline(userId));
     }
 
+
+    @GetMapping("/page")
+    public ResponseEntity<Page<FlightScheduleResponse>> getFlightSchedulePage(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "page must be nonnegative and size must be between 1 and 100");
+        }
+        return ResponseEntity.ok(flightScheduleService.getFlightSchedulePage(userId, page, size));
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<FlightScheduleResponse> updateFlightSchedule(

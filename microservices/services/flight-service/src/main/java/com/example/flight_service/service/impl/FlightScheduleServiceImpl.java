@@ -1,5 +1,9 @@
 package com.example.flight_service.service.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import com.example.enums.FlightStatus;
 import com.example.flight_service.client.AirlineClient;
 import com.example.flight_service.client.LocationClient;
@@ -106,6 +110,23 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         ).collect(Collectors.toList());
     }
 
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<FlightScheduleResponse> getFlightSchedulePage(
+            Long userId, int page, int size) {
+        AirlineResponse airline = airlineClient.getAirlineByOwner(userId);
+        var pageable = PageRequest.of(page, size,
+                Sort.by("id").ascending());
+        return flightScheduleRepository.findByFlightAirlineId(airline.getId(), pageable)
+                .map(schedule -> {
+                    try {
+                        return convertToFlightScheduleResponse(schedule);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+    }
 
     @Override
     public FlightScheduleResponse updateFlightSchedule(Long id,
