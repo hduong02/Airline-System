@@ -2,6 +2,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/utils/api";
 import { getHeaders } from "@/utils/getHeaders";
+import { bookingRequestFingerprint, getBookingAttemptKey } from "@/utils/bookingAttempt";
 
 const API_URL = "/api/bookings";
 
@@ -48,7 +49,14 @@ export const createBooking = createAsyncThunk(
   async (data, { rejectWithValue, getState, signal }) => {
     const sessionId = getState().auth.sessionId;
     try {
-      const res = await api.post(API_URL, data, { headers: getHeaders(), signal });
+      const fingerprint = await bookingRequestFingerprint(data);
+      if (signal.aborted || getState().auth.sessionId !== sessionId) {
+        return rejectWithValue('The booking request belongs to a previous session');
+      }
+      const key = getBookingAttemptKey(fingerprint, getState().auth.user?.id);
+      const res = await api.post(API_URL, data, {
+        headers: { ...getHeaders(), 'Idempotency-Key': key }, signal,
+      });
       if (signal.aborted || getState().auth.sessionId !== sessionId) {
         return rejectWithValue('The booking request belongs to a previous session');
       }
@@ -73,7 +81,7 @@ export const createBooking = createAsyncThunk(
       return res.data;
     } catch (err) {
       console.error("❌ createBooking error:", err.response?.data?.message || err.message);
-      return rejectWithValue(err.response?.data?.message || "Failed to create booking");
+      return rejectWithValue(err.response?.data?.message || err.response?.data?.detail || "Failed to create booking");
     }
   }
 );

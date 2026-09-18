@@ -133,6 +133,12 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(rollbackFor = Exception.class)
     public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
             throws Exception {
+        return paymentClient.initiatePayment(prepareBooking(request, userId), userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentInitiateRequest prepareBooking(BookingRequest request, Long userId) throws Exception {
         FlightInstanceCabinResponse cabin = validateCabinCapacity(request);
         BookingSelection selection = validateBookingSelection(request, cabin);
 
@@ -216,7 +222,7 @@ public class BookingServiceImpl implements BookingService {
                 .description("Payment for booking reference: " + bookingReference)
                 .build();
         
-        return paymentClient.initiatePayment(paymentRequest, userId);
+        return paymentRequest;
     }
 
     @Override

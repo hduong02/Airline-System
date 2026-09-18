@@ -24,4 +24,5 @@ export function clearSessionStorage({ preserveToken = false } = {}) {
   if (!preserveToken) localStorage.removeItem('jwt');
   localStorage.removeItem('airline_onboarding_progress');
   sessionStorage.removeItem('paymentDetails');
+  sessionStorage.removeItem('bookingAttempts');
 }

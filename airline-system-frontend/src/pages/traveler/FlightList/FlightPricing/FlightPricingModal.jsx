@@ -12,6 +12,7 @@ import FareCard from "./FareCard";
 import { getCabinClassesByAircraft } from "@/Redux/cabinClass/cabinClassThunk";
 import { buildBookingPayload } from "@/services/Booking/bookingService";
 import { getPassengerCount, isFareForSelection, selectInitialCabin } from "@/utils/bookingCheckout";
+import { startBookingAttempt } from "@/utils/bookingAttempt";
 
 const formatFlightTime = (dateTime) => {
   const date = new Date(dateTime);
@@ -106,6 +107,7 @@ const FlightPricingModal = ({ isOpen, onClose, flight, onSelectFare }) => {
 
       // store data
       sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
+      startBookingAttempt();
 
       // navigate
       const params = new URLSearchParams(queryParams);

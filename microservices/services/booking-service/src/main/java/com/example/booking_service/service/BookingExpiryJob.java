@@ -22,11 +22,13 @@ public class BookingExpiryJob {
     private final PaymentClient paymentClient;
     private final PaymentEventListener paymentEventListener;
     private final BookingExpiryService expiryService;
+    private final IdempotentBookingService idempotentBookingService;
 
     @Scheduled(cron = "0 * * * * *", zone = "UTC")
     public void expireOverdueBookings() {
         for (Long bookingId : bookingRepository.findExpiredBookingIds(BookingStatus.PENDING, Instant.now())) {
             try {
+                idempotentBookingService.prepareExpiredCheckout(bookingId);
                 PaymentDto payment = paymentClient.reconcileExpiredCheckout(bookingId);
                 if (payment == null || payment.getStatus() == null) {
                     continue;

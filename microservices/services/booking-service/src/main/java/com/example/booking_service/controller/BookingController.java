@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.booking_service.service.BookingService;
+import com.example.booking_service.service.IdempotentBookingService;
 import com.example.enums.BookingStatus;
 import com.example.payload.request.BookingRequest;
 import com.example.payload.response.BookingResponse;
@@ -21,14 +22,16 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final IdempotentBookingService idempotentBookingService;
 
     @PostMapping
     public ResponseEntity<PaymentInitiateResponse> createBooking(
             @Valid @RequestBody BookingRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestHeader("X-User-Id") Long userId)
             throws Exception
         {
-        PaymentInitiateResponse response = bookingService.createBooking(request, userId);
+        PaymentInitiateResponse response = idempotentBookingService.createBooking(request, userId, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
