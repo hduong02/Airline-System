@@ -503,7 +503,7 @@ const FlightSearchBar = ({ onSearch, className, destinationPrefill, initialSearc
         {/* Search Button */}
         <Button
           onClick={handleSearch}
-          className="w-full h-20 text-xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 rounded-2xl shadow-2xl shadow-blue-500/30 hover:shadow-blue-600/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group"
+          className="w-full h-20 text-xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 rounded-2xl shadow-2xl shadow-blue-500/30 hover:shadow-blue-600/50 disabled:shadow-none transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group"
           disabled={!searchData.departureAirportId || !searchData.arrivalAirportId || !searchData.departureDate}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

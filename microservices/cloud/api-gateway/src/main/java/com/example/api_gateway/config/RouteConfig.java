@@ -28,6 +28,54 @@ public class RouteConfig {
 
     // ==================== Public routes ====================
 
+    // Only the reads used to discover flights and compare fares are public.
+    // Booking, payment, and all inventory mutations still use jwtAuthFilter.
+    @Bean
+    @Order(0)
+    public RouterFunction<ServerResponse> publicFlightSearchRoutes() {
+        return GatewayRouterFunctions.route("public-flight-search-routes")
+                .route(RequestPredicates.GET("/api/flights/search"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("flight-service"))
+                .build();
+    }
+
+    @Bean
+    @Order(0)
+    public RouterFunction<ServerResponse> publicAirportRoutes() {
+        return GatewayRouterFunctions.route("public-airport-routes")
+                .route(RequestPredicates.GET("/api/airports"), HandlerFunctions.http())
+                .route(RequestPredicates.GET("/api/airports/"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("location-service"))
+                .build();
+    }
+
+    @Bean
+    @Order(0)
+    public RouterFunction<ServerResponse> publicAirlineDropdownRoutes() {
+        return GatewayRouterFunctions.route("public-airline-dropdown-routes")
+                .route(RequestPredicates.GET("/api/airlines/dropdown"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("airline-service"))
+                .build();
+    }
+
+    @Bean
+    @Order(0)
+    public RouterFunction<ServerResponse> publicSearchCabinRoutes() {
+        return GatewayRouterFunctions.route("public-search-cabin-routes")
+                .route(RequestPredicates.GET("/api/cabin-classes/aircraft/{aircraftId}"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("seat-service"))
+                .build();
+    }
+
+    @Bean
+    @Order(0)
+    public RouterFunction<ServerResponse> publicSearchFareRoutes() {
+        return GatewayRouterFunctions.route("public-search-fare-routes")
+                .route(RequestPredicates.GET("/api/fares/flight/{flightId}/cabin-class/{cabinId}"), HandlerFunctions.http())
+                .filter(LoadBalancerFilterFunctions.lb("pricing-service"))
+                .build();
+    }
+
     @Bean
     public RouterFunction<ServerResponse> authRoutes() {
         return GatewayRouterFunctions.route("auth-routes")

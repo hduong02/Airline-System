@@ -3,6 +3,7 @@ import { after, test } from 'node:test';
 import { createServer } from 'vite';
 import * as Yup from 'yup';
 import { loadComponent, findAll, deferred, settle } from './componentHarness.mjs';
+import { getLoginDestination } from '../src/utils/authNavigation.js';
 
 const server = await createServer({
   server: { middlewareMode: true }, appType: 'custom', optimizeDeps: { noDiscovery: true, include: [] },
@@ -97,6 +98,48 @@ test('untouched, whitespace-only and invalid contact data cannot be submitted', 
 const cabins = [{ id: 1, code: 'Y', name: 'Economy' }, { id: 2, code: 'W', name: 'Premium Economy' }];
 const flight = { id: 5, flightId: 10, aircraftId: 20, departureAirportCode: 'A', arrivalAirportCode: 'B' };
 const fare = { id: 30, flightId: 10, cabinClassId: 2, cabinClass: 'PREMIUM_ECONOMY', baseFare: 100, taxesAndFees: 20, airlineFees: 10 };
+
+test('guest can compare fares, then continuing requires login and preserves the booking selection', async () => {
+  const saved = new Map();
+  const navigations = [];
+  const modal = await loadComponent('pages/traveler/FlightList/FlightPricing/FlightPricingModal.jsx', {
+    ...checkout, buildBookingPayload,
+    sessionStorage: { setItem: (key, value) => saved.set(key, value) },
+    useDispatch: () => action => ({ unwrap: async () => action.type === 'cabins' ? cabins : [fare] }),
+    useNavigate: () => path => navigations.push(path),
+    useSearchParams: () => [new URLSearchParams('numberOfTravellers=3&cabinClass=PREMIUM_ECONOMY')],
+    getCabinClassesByAircraft: id => ({ type: 'cabins', id }),
+    getFlightFares: data => ({ type: 'fares', ...data }),
+  });
+  const props = { isOpen: true, flight };
+  modal.render(props); modal.flushEffects(); await settle();
+  modal.render(props); modal.flushEffects(); await settle();
+  let tree = modal.render(props);
+  assert.equal(navigations.length, 0);
+  const card = findAll(tree, node => node.type === 'FareCard')[0];
+  assert.equal(card.props.fare.id, 30);
+  card.props.onSelect(fare);
+  tree = modal.render(props);
+  const buy = findAll(tree, node => node.type === 'Button').at(-1);
+  assert.equal(buy.props.disabled, false);
+  buy.props.onClick();
+  const destination = navigations[0];
+  const [pathname, query] = destination.split('?');
+  const params = new URLSearchParams(query);
+  assert.equal(pathname, '/booking-review');
+  assert.equal(params.get('fareId'), '30');
+  assert.equal(params.get('flightInstanceId'), '5');
+  assert.equal(params.get('numberOfTravellers'), '3');
+  const guard = await loadComponent('components/SessionRoutes.jsx', {
+    useSelector: selector => selector({ auth: { initialized: true, isAuthenticated: false, user: null } }),
+    useLocation: () => ({ pathname, search: `?${query}` }),
+  }, 'RequireSession');
+  const redirect = guard.render();
+  assert.equal(redirect.props.to, '/login');
+  assert.equal(redirect.props.state.from, destination);
+  assert.equal(getLoginDestination('ROLE_USER', redirect.props.state.from), destination);
+  modal.unmount();
+});
 test('requested cabin resolves by id, code or type and waits for available cabins', () => {
   assert.equal(checkout.selectInitialCabin([], 'ECONOMY'), null);
   for (const requested of ['PREMIUM_ECONOMY', 'Premium Economy', 'W', 2, { id: 2 }]) {

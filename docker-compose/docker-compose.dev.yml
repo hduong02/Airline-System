@@ -5,6 +5,7 @@
 services:
 
   mailhog:
+    restart: unless-stopped
     image: mailhog/mailhog:v1.0.1
     container_name: mailhog
     ports:
@@ -12,6 +13,7 @@ services:
       - "127.0.0.1:8025:8025" # Web inbox
 
   redis:
+    restart: unless-stopped
     image: redis:8.10-alpine
     container_name: redis
     ports:
@@ -24,6 +26,7 @@ services:
       retries: 5
 
   kafka:
+    restart: unless-stopped
     image: apache/kafka:4.3.1
     container_name: kafka
     mem_limit: 1g
