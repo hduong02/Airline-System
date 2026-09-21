@@ -22,7 +22,7 @@ class AirlineBookingPageControllerTest {
         var service = mock(BookingService.class);
         when(service.getAirlineBookingPage(7L, "needle", BookingStatus.CONFIRMED, 9L, "ASC", 1, 10))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 10), 10));
-        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service, mock(IdempotentBookingService.class))).build();
         mvc.perform(get("/api/bookings/airline/page").header("X-User-Id", "7")
                         .param("search", "needle").param("status", "CONFIRMED")
                         .param("flightInstanceId", "9").param("sortDirection", "ASC")
@@ -43,14 +43,14 @@ class AirlineBookingPageControllerTest {
         var service = mock(BookingService.class);
         when(service.getAirlineBookingPage(7L, null, null, null, "DESC", 0, 20))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
-        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service, mock(IdempotentBookingService.class))).build();
         mvc.perform(get("/api/bookings/airline/page").header("X-User-Id", "7"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.size").value(20));
         verify(service).getAirlineBookingPage(7L, null, null, null, "DESC", 0, 20);
     }
 
     @Test void rejectsInvalidPagingBeforeCallingAnyDependencies() {
-        var service = new BookingServiceImpl(null, null, null, null, null, null, null, null, null, null);
+        var service = new BookingServiceImpl(null, null, null, null, null, null, null, null, null, null, null);
         for (int[] bounds : List.of(new int[]{-1, 20}, new int[]{0, 0}, new int[]{0, 101})) {
             var error = assertThrows(ResponseStatusException.class, () -> service.getAirlineBookingPage(
                     7L, null, null, null, "DESC", bounds[0], bounds[1]));

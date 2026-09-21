@@ -4,6 +4,8 @@ import com.example.enums.PaymentStatus;
 import com.example.payload.request.PaymentVerifyRequest;
 import com.example.payment_service.event.PaymentEventProducer;
 import com.example.payment_service.model.Payment;
+import com.example.payment_service.model.CheckoutVerificationSnapshot;
+import org.springframework.transaction.PlatformTransactionManager;
 import com.example.payment_service.repository.PaymentRepository;
 import com.example.payment_service.service.PaymentInitiationService;
 import com.example.payment_service.service.gateway.StripeService;
@@ -25,7 +27,7 @@ class PaymentVerificationTest {
     private final StripeService stripe = mock(StripeService.class);
     private final PaymentEventProducer events = mock(PaymentEventProducer.class);
     private final PaymentServiceImpl service = new PaymentServiceImpl(repository, stripe, events,
-            mock(PaymentInitiationService.class));
+            mock(PaymentInitiationService.class), mock(PlatformTransactionManager.class));
 
     @Test
     void paidCheckoutReturnConfirmsPaymentAndPublishesOnlyOnce() throws Exception {
@@ -90,6 +92,10 @@ class PaymentVerificationTest {
     private Payment checkoutPayment() {
         Payment payment = payment();
         payment.setCheckoutSessionId("cs_saved");
+        when(repository.findCheckoutVerificationSnapshot(1L)).thenAnswer(invocation -> Optional.of(
+                new CheckoutVerificationSnapshot(payment.getId(), payment.getUserId(), payment.getStatus(),
+                        payment.getCheckoutSessionId())));
+        when(repository.findById(9L)).thenReturn(Optional.of(payment));
         when(repository.findByBookingIdForUpdate(1L)).thenReturn(Optional.of(payment));
         return payment;
     }

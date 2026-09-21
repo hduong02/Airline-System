@@ -23,8 +23,9 @@ class BookingExpiryJobTest {
     private final PaymentClient paymentClient = mock(PaymentClient.class);
     private final PaymentEventListener paymentListener = mock(PaymentEventListener.class);
     private final BookingExpiryService expiryService = mock(BookingExpiryService.class);
+    private final IdempotentBookingService idempotentBookings = mock(IdempotentBookingService.class);
     private final BookingExpiryJob job = new BookingExpiryJob(
-            repository, paymentClient, paymentListener, expiryService);
+            repository, paymentClient, paymentListener, expiryService, idempotentBookings);
 
     @Test
     void cancelsOnlyWhenCheckoutCanNoLongerComplete() {
@@ -58,6 +59,22 @@ class BookingExpiryJobTest {
         assertEquals(1L, event.getValue().getBookingId());
         assertEquals(9L, event.getValue().getPaymentId());
         verifyNoInteractions(expiryService);
+    }
+
+    @Test
+    void missingCheckoutRecoveryRunsBeforeReconciliationAndFailureKeepsSeatHeld() throws Exception {
+        when(repository.findExpiredBookingIds(eq(BookingStatus.PENDING), any(Instant.class)))
+                .thenReturn(List.of(1L, 2L));
+        when(paymentClient.reconcileExpiredCheckout(1L)).thenReturn(payment(PaymentStatus.CANCELLED));
+        doThrow(new IllegalStateException("Payment unavailable"))
+                .when(idempotentBookings).prepareExpiredCheckout(2L);
+        job.expireOverdueBookings();
+        var order = inOrder(idempotentBookings, paymentClient, expiryService);
+        order.verify(idempotentBookings).prepareExpiredCheckout(1L);
+        order.verify(paymentClient).reconcileExpiredCheckout(1L);
+        order.verify(expiryService).cancelExpiredBooking(1L);
+        verify(paymentClient, never()).reconcileExpiredCheckout(2L);
+        verify(expiryService, never()).cancelExpiredBooking(2L);
     }
 
     private PaymentDto payment(PaymentStatus status) {

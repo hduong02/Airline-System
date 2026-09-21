@@ -10,6 +10,7 @@ import com.example.payment_service.service.gateway.StripeService.CheckoutOutcome
 import com.example.payment_service.service.gateway.StripeService.CheckoutState;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Optional;
 
@@ -21,7 +22,8 @@ class PaymentExpiryReconciliationTest {
     private final StripeService stripe = mock(StripeService.class);
     private final PaymentEventProducer events = mock(PaymentEventProducer.class);
     private final PaymentInitiationService initiation = mock(PaymentInitiationService.class);
-    private final PaymentServiceImpl service = new PaymentServiceImpl(repository, stripe, events, initiation);
+    private final PaymentServiceImpl service = new PaymentServiceImpl(repository, stripe, events, initiation,
+            mock(PlatformTransactionManager.class));
 
     @Test
     void paidCheckoutWinsExpiryAndPublishesSuccessOnlyOnce() throws Exception {

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.util.Set;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 import com.example.payload.dto.UserDto;
@@ -14,6 +15,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.PaymentIntent;
+import com.stripe.net.RequestOptions;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +69,13 @@ public class StripeService {
         if (!isConfigured())
             throw new Exception("stripe not configured. please setup api key");
 
+        // Stripe may prune idempotency keys after 24 hours. Older incomplete
+        // payments need reconciliation rather than another creation attempt.
+        Instant createdAt = payment.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant();
+        if (createdAt.isBefore(Instant.now().minus(23, ChronoUnit.HOURS))) {
+            throw new IllegalStateException("Incomplete Checkout requires reconciliation");
+        }
+
         try {
             // Convert amount to smallest currency unit (cents for USD)
             BigDecimal amount = BigDecimal.valueOf(payment.getAmount());
@@ -102,7 +111,7 @@ public class StripeService {
                     .setCustomerEmail(user.getEmail())
                     // Stripe requires at least 30 minutes from Session creation. The
                     // booking job closes this session at the earlier seat-hold deadline.
-                    .setExpiresAt(Instant.now().plus(31, ChronoUnit.MINUTES).getEpochSecond())
+                    .setExpiresAt(createdAt.plus(31, ChronoUnit.MINUTES).getEpochSecond())
                     .setPaymentIntentData(SessionCreateParams.PaymentIntentData.builder()
                             .putMetadata("user_id", String.valueOf(user.getId()))
                             .putMetadata("payment_id", String.valueOf(payment.getId()))
@@ -118,7 +127,8 @@ public class StripeService {
 
             SessionCreateParams params = paramsBuilder.build();
 
-            Session session = Session.create(params);
+            Session session = Session.create(params, RequestOptions.builder()
+                    .setIdempotencyKey("checkout-" + payment.getTransactionId()).build());
 
             PaymentLinkResponse response = new PaymentLinkResponse();
             response.setPayment_link_url(session.getUrl());

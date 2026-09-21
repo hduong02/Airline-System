@@ -29,26 +29,49 @@ class SeatInstanceServiceImplTest {
             seatRepository, cabinRepository, cancelledRepository);
 
     @Test
+    void selectedSeatsReturnOnlyRequestedInventoryWithoutLoadingCabin() {
+        var seat = com.example.seat_service.model.Seat.builder().id(5L)
+                .seatNumber("12A").seatRow(12).columnLetter('A')
+                .seatType(com.example.enums.SeatType.WINDOW).build();
+        var instance = SeatInstance.builder().id(100L).flightId(10L).flightInstanceId(20L)
+                .seat(seat).flightInstanceCabin(FlightInstanceCabin.builder().id(40L).build()).build();
+        when(seatRepository.findSelectedWithDetails(List.of(100L))).thenReturn(List.of(instance));
+
+        var response = service.getSelectedSeats(List.of(100L, 100L));
+
+        assertEquals(1, response.size());
+        assertEquals("12A", response.getFirst().getSeatNumber());
+        assertEquals(20L, response.getFirst().getFlightInstanceId());
+        org.mockito.Mockito.verifyNoInteractions(cabinRepository);
+    }
+
+    @Test
+    void emptySelectionDoesNotQueryInventory() {
+        assertTrue(service.getSelectedSeats(List.of()).isEmpty());
+        org.mockito.Mockito.verifyNoInteractions(seatRepository);
+    }
+
+    @Test
     void reservationClaimsSeatBeforePaymentAndConfirmationKeepsCount() {
         FlightInstanceCabin cabin = FlightInstanceCabin.builder()
                 .id(40L).totalSeats(1).bookedSeats(0).build();
         SeatInstance seat = SeatInstance.builder().id(100L)
                 .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.AVAILABLE).build();
         when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
-        when(cabinRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(cabin));
+        when(cabinRepository.reserveCapacity(40L, 1)).thenReturn(1);
 
         service.reserveBookingSeats(99L, List.of(100L));
 
         assertEquals(SeatAvailabilityStatus.RESERVED, seat.getStatus());
         assertEquals(99L, seat.getBookingId());
-        assertEquals(1, cabin.getBookedSeats());
+        verify(cabinRepository).reserveCapacity(40L, 1);
         assertThrows(IllegalStateException.class,
                 () -> service.reserveBookingSeats(98L, List.of(100L)));
 
         service.confirmBookingSeats(99L, List.of(100L));
 
         assertEquals(SeatAvailabilityStatus.BOOKED, seat.getStatus());
-        assertEquals(1, cabin.getBookedSeats());
+        verify(cabinRepository, never()).releaseCapacity(40L, 1);
     }
 
     @Test
@@ -58,12 +81,12 @@ class SeatInstanceServiceImplTest {
         SeatInstance seat = SeatInstance.builder().id(100L).bookingId(99L)
                 .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.RESERVED).build();
         when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
-        when(cabinRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(cabin));
+        when(cabinRepository.releaseCapacity(40L, 1)).thenReturn(1);
 
         service.releaseBookingSeats(99L, List.of(100L));
 
         assertEquals(SeatAvailabilityStatus.AVAILABLE, seat.getStatus());
-        assertEquals(0, cabin.getBookedSeats());
+        verify(cabinRepository).releaseCapacity(40L, 1);
         assertEquals(null, seat.getBookingId());
     }
 
@@ -89,12 +112,12 @@ class SeatInstanceServiceImplTest {
                 .flightInstanceCabin(cabin).status(SeatAvailabilityStatus.BOOKED)
                 .isBooked(true).isAvailable(false).build();
         when(seatRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(seat));
-        when(cabinRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(cabin));
+        when(cabinRepository.releaseCapacity(40L, 1)).thenReturn(1);
 
         service.releaseBookingSeats(99L, List.of(100L, 100L));
         service.releaseBookingSeats(99L, List.of(100L));
 
-        assertEquals(0, cabin.getBookedSeats());
+        verify(cabinRepository).releaseCapacity(40L, 1);
         assertEquals(SeatAvailabilityStatus.AVAILABLE, seat.getStatus());
         assertFalse(seat.isBooked());
         assertTrue(seat.isAvailable());

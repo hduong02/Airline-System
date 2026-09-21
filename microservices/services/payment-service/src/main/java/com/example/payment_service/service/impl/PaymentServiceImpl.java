@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,17 +45,12 @@ public class PaymentServiceImpl implements PaymentService {
     private final StripeService stripeService;
     private final PaymentEventProducer paymentEventProducer;
     private final PaymentInitiationService paymentInitiationService;
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request)
             throws Exception {
-        try {
-            return paymentInitiationService.initiatePayment(request);
-        } catch (DataIntegrityViolationException e) {
-            // The losing insert's transaction is already rolled back. Read the
-            // winner in a fresh transaction, never retry inside a failed one.
-            return paymentInitiationService.findExistingPayment(request).orElseThrow(() -> e);
-        }
+        return paymentInitiationService.initiatePayment(request);
     }
 
     @Override
@@ -111,29 +109,57 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentDto verifyCheckoutPayment(Long bookingId, Long userId) throws Exception {
-        Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
-        if (userId == null || !userId.equals(payment.getUserId())) {
+        var read = new TransactionTemplate(transactionManager);
+        read.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
+        read.setReadOnly(true);
+        var snapshot = Objects.requireNonNull(read.execute(status ->
+                paymentRepository.findCheckoutVerificationSnapshot(bookingId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"))));
+        if (userId == null || !userId.equals(snapshot.userId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment belongs to another user");
         }
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            return PaymentMapper.toDto(payment);
+        if (snapshot.status() != PaymentStatus.PENDING) {
+            return read.execute(status -> {
+                Payment payment = paymentRepository.findById(snapshot.paymentId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
+                if (!userId.equals(payment.getUserId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment belongs to another user");
+                }
+                return PaymentMapper.toDto(payment);
+            });
         }
-        if (payment.getCheckoutSessionId() == null || payment.getCheckoutSessionId().isBlank()) {
+        if (snapshot.checkoutSessionId() == null || snapshot.checkoutSessionId().isBlank()) {
             throw new IllegalStateException("Checkout Session is missing for booking: " + bookingId);
         }
         // Read only: returning to the site must never expire an unpaid checkout.
-        var checkout = stripeService.fetchCheckoutState(payment.getCheckoutSessionId());
-        if (checkout.outcome() == CheckoutOutcome.PAID) {
-            if (checkout.paymentIntentId() == null || checkout.paymentIntentId().isBlank()) {
-                throw new IllegalStateException("Paid Checkout Session has no PaymentIntent");
+        var checkout = stripeService.fetchCheckoutState(snapshot.checkoutSessionId());
+        var write = new TransactionTemplate(transactionManager);
+        write.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
+        return write.execute(status -> {
+            Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
+            if (!userId.equals(payment.getUserId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment belongs to another user");
             }
-            payment.setProviderPaymentId(checkout.paymentIntentId());
-            return saveAndPublish(payment, true, "succeeded");
-        }
-        return PaymentMapper.toDto(payment);
+            // A concurrent verification or expiry may have completed while Stripe was in flight.
+            if (payment.getStatus() != PaymentStatus.PENDING) {
+                return PaymentMapper.toDto(payment);
+            }
+            if (!snapshot.paymentId().equals(payment.getId())
+                    || !snapshot.checkoutSessionId().equals(payment.getCheckoutSessionId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout Session changed during verification");
+            }
+            if (checkout.outcome() == CheckoutOutcome.PAID) {
+                if (checkout.paymentIntentId() == null || checkout.paymentIntentId().isBlank()) {
+                    throw new IllegalStateException("Paid Checkout Session has no PaymentIntent");
+                }
+                payment.setProviderPaymentId(checkout.paymentIntentId());
+                return saveAndPublish(payment, true, "succeeded");
+            }
+            return PaymentMapper.toDto(payment);
+        });
     }
 
     @Override

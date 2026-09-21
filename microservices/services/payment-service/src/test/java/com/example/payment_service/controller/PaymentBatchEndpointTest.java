@@ -38,7 +38,7 @@ class PaymentBatchEndpointTest {
         repository.deleteAll();
         repository.saveAndFlush(payment(6L, 10L));
         repository.saveAndFlush(payment(7L, 20L));
-        var service = new PaymentServiceImpl(repository, null, null, null);
+        var service = new PaymentServiceImpl(repository, null, null, null, null);
         mvc = MockMvcBuilders.standaloneSetup(
                 new PaymentController(service), new InternalPaymentController(service)).build();
     }

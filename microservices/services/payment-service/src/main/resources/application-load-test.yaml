@@ -1,0 +1,4 @@
+stripe:
+  api:
+    key: sk_test_simulator
+    base-url: http://stripe-simulator:8080

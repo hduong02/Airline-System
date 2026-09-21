@@ -29,6 +29,8 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.mockito.ArgumentCaptor;
 
 import javax.sql.DataSource;
 import java.util.Map;
@@ -58,16 +60,38 @@ class PaymentInitiationIntegrationTest {
     }
 
     @Test
-    void checkedStripeFailureRollsBackPaymentAndAllowsRetry() throws Exception {
+    void checkedStripeFailureKeepsClaimAndRetriesTheSamePayment() throws Exception {
         when(stripe.createPaymentLink(any(), any())).thenThrow(new Exception("Stripe unavailable"))
                 .thenReturn(link());
 
         assertThrows(Exception.class, () -> service.initiatePayment(request()));
-        assertEquals(0, repository.count());
+        Payment claim = repository.findByBookingId(1L).orElseThrow();
+        assertNull(claim.getCheckoutSessionId());
 
         PaymentInitiateResponse response = service.initiatePayment(request());
         assertEquals(1, repository.count());
+        assertEquals(claim.getId(), response.getPaymentId());
+        assertEquals(claim.getTransactionId(), response.getTransactionId());
         assertEquals("cs_1", repository.findById(response.getPaymentId()).orElseThrow().getCheckoutSessionId());
+    }
+
+    @Test
+    void failureSavingCheckoutKeepsClaimAndRetriesWithTheSameStripeIdentity() throws Exception {
+        doThrow(new DataAccessResourceFailureException("Database unavailable"))
+                .when(repository).save(any(Payment.class));
+
+        assertThrows(DataAccessResourceFailureException.class, () -> service.initiatePayment(request()));
+        Payment claim = repository.findByBookingId(1L).orElseThrow();
+        assertNull(claim.getCheckoutSessionId());
+
+        reset(repository);
+        PaymentInitiateResponse response = service.initiatePayment(request());
+        assertEquals(claim.getId(), response.getPaymentId());
+        assertEquals("cs_1", repository.findById(claim.getId()).orElseThrow().getCheckoutSessionId());
+        var attempts = ArgumentCaptor.forClass(Payment.class);
+        verify(stripe, times(2)).createPaymentLink(any(), attempts.capture());
+        assertTrue(attempts.getAllValues().stream().allMatch(payment ->
+                claim.getTransactionId().equals(payment.getTransactionId())));
     }
 
     @Test
@@ -76,6 +100,8 @@ class PaymentInitiationIntegrationTest {
         PaymentInitiateResponse second = service.initiatePayment(request());
 
         assertEquals(first.getPaymentId(), second.getPaymentId());
+        assertEquals(request().getBookingId(), first.getBookingId());
+        assertEquals(first.getBookingId(), second.getBookingId());
         assertEquals(first.getTransactionId(), second.getTransactionId());
         assertEquals(first.getCheckoutUrl(), second.getCheckoutUrl());
         assertEquals(1, repository.count());
@@ -83,7 +109,7 @@ class PaymentInitiationIntegrationTest {
     }
 
     @Test
-    void concurrentInitiationsReturnOnePaymentAndCreateOneStripeSession() throws Exception {
+    void concurrentInitiationsUseOnePaymentIdentityForStripe() throws Exception {
         CyclicBarrier bothReadMissingPayment = new CyclicBarrier(2);
         doAnswer(invocation -> {
             Optional<Payment> payment = repository.findByBookingIdIn(List.of(1L)).stream().findFirst();
@@ -103,7 +129,14 @@ class PaymentInitiationIntegrationTest {
             assertEquals(firstResponse.getCheckoutUrl(), secondResponse.getCheckoutUrl());
         }
         assertEquals(1, repository.count());
-        verify(stripe).createPaymentLink(any(), any());
+        // Concurrent callers may both reach Stripe, using the same persisted
+        // payment identity; Stripe deduplicates the idempotent creation request.
+        var attempts = ArgumentCaptor.forClass(Payment.class);
+        verify(stripe, atLeastOnce()).createPaymentLink(any(), attempts.capture());
+        Payment winner = repository.findByBookingId(1L).orElseThrow();
+        assertTrue(attempts.getAllValues().stream().allMatch(payment ->
+                winner.getId().equals(payment.getId())
+                        && winner.getTransactionId().equals(payment.getTransactionId())));
     }
 
     @Test
@@ -166,13 +199,14 @@ class PaymentInitiationIntegrationTest {
         @Bean PaymentEventProducer paymentEventProducer() { return mock(PaymentEventProducer.class); }
 
         @Bean PaymentInitiationService paymentInitiationService(PaymentRepository repository,
-                StripeService stripe, UserClient users) {
-            return new PaymentInitiationService(repository, stripe, users);
+                StripeService stripe, UserClient users, PlatformTransactionManager transactionManager) {
+            return new PaymentInitiationService(repository, stripe, users, transactionManager);
         }
 
         @Bean PaymentServiceImpl paymentService(PaymentRepository repository, StripeService stripe,
-                PaymentEventProducer events, PaymentInitiationService initiation) {
-            return new PaymentServiceImpl(repository, stripe, events, initiation);
+                PaymentEventProducer events, PaymentInitiationService initiation,
+                PlatformTransactionManager transactionManager) {
+            return new PaymentServiceImpl(repository, stripe, events, initiation, transactionManager);
         }
     }
 }

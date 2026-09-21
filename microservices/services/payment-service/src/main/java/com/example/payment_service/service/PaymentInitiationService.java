@@ -9,31 +9,51 @@ import com.example.payment_service.client.UserClient;
 import com.example.payment_service.model.Payment;
 import com.example.payment_service.repository.PaymentRepository;
 import com.example.payment_service.service.gateway.StripeService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentInitiationService {
     private final PaymentRepository paymentRepository;
     private final StripeService stripeService;
     private final UserClient userClient;
+    private final TransactionTemplate transactions;
 
-    // A separate transaction lets the caller recover from a duplicate insert only
-    // after that transaction has rolled back, including on checked gateway errors.
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public PaymentInitiationService(PaymentRepository paymentRepository, StripeService stripeService,
+            UserClient userClient, PlatformTransactionManager transactionManager) {
+        this.paymentRepository = paymentRepository;
+        this.stripeService = stripeService;
+        this.userClient = userClient;
+        this.transactions = new TransactionTemplate(transactionManager);
+        this.transactions.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws Exception {
+        Payment payment;
+        try {
+            payment = transactions.execute(status -> findOrCreatePayment(request));
+        } catch (DataIntegrityViolationException e) {
+            // The unique booking claim lost. Read the winner only after rollback.
+            payment = transactions.execute(status -> paymentRepository.findByBookingId(request.getBookingId())
+                    .orElseThrow(() -> e));
+        }
+        return resumePayment(Objects.requireNonNull(payment), request);
+    }
+
+    private Payment findOrCreatePayment(PaymentInitiateRequest request) {
         Payment existing = paymentRepository.findByBookingId(request.getBookingId()).orElse(null);
         if (existing != null) {
-            return resumePayment(existing, request);
+            return existing;
         }
 
         Payment payment = Payment.builder()
@@ -46,23 +66,8 @@ public class PaymentInitiationService {
                         + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .build();
 
-        // Claim the unique booking ID before calling Stripe. Concurrent requests
-        // must lose this insert before they can create another Checkout Session.
-        payment = paymentRepository.saveAndFlush(payment);
-        PaymentLinkResponse link = null;
-        if (payment.getProvider() == PaymentGateway.STRIPE) {
-            link = stripeService.createPaymentLink(userClient.getUserById(payment.getUserId()), payment);
-            payment.setCheckoutSessionId(link.getPayment_link_id());
-            paymentRepository.save(payment);
-        }
-        return toResponse(payment, request, link);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true, rollbackFor = Exception.class)
-    public Optional<PaymentInitiateResponse> findExistingPayment(PaymentInitiateRequest request)
-            throws Exception {
-        Payment payment = paymentRepository.findByBookingId(request.getBookingId()).orElse(null);
-        return payment == null ? Optional.empty() : Optional.of(resumePayment(payment, request));
+        // Commit the booking claim before contacting either upstream service.
+        return paymentRepository.saveAndFlush(payment);
     }
 
     private PaymentInitiateResponse resumePayment(Payment payment, PaymentInitiateRequest request)
@@ -80,10 +85,23 @@ public class PaymentInitiationService {
         PaymentLinkResponse link = null;
         if (payment.getProvider() == PaymentGateway.STRIPE) {
             if (payment.getCheckoutSessionId() == null) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Existing payment has no Checkout Session; reconciliation is required");
+                // Keep the committed claim on errors: a timeout may hide a successful
+                // Stripe creation. Retries use this payment's stable idempotency key.
+                link = stripeService.createPaymentLink(userClient.getUserById(payment.getUserId()), payment);
+                String sessionId = link.getPayment_link_id();
+                Long paymentId = payment.getId();
+                payment = transactions.execute(status -> {
+                    Payment current = paymentRepository.findByIdForUpdate(paymentId).orElseThrow();
+                    if (current.getCheckoutSessionId() != null
+                            && !current.getCheckoutSessionId().equals(sessionId)) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout Session does not match");
+                    }
+                    current.setCheckoutSessionId(sessionId);
+                    return paymentRepository.save(current);
+                });
+            } else {
+                link = stripeService.fetchCheckoutLink(payment.getCheckoutSessionId());
             }
-            link = stripeService.fetchCheckoutLink(payment.getCheckoutSessionId());
         }
         return toResponse(payment, request, link);
     }

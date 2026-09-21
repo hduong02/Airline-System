@@ -19,7 +19,7 @@ class TravelerBookingPageControllerTest {
         var service = mock(BookingService.class);
         when(service.getTravelerBookingPage(7L, "past", 1, 20))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 20), 20));
-        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(service, mock(IdempotentBookingService.class))).build();
         mvc.perform(get("/api/bookings/user/history/page").header("X-User-Id", "7")
                         .param("tab", "past").param("page", "1").param("size", "20")
                         .param("userId", "999"))
@@ -34,14 +34,14 @@ class TravelerBookingPageControllerTest {
         var service = mock(BookingService.class);
         when(service.getTravelerBookingPage(7L, "all", 0, 10))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
-        MockMvcBuilders.standaloneSetup(new BookingController(service)).build()
+        MockMvcBuilders.standaloneSetup(new BookingController(service, mock(IdempotentBookingService.class))).build()
                 .perform(get("/api/bookings/user/history/page").header("X-User-Id", "7"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.size").value(10));
         verify(service).getTravelerBookingPage(7L, "all", 0, 10);
     }
 
     @Test void invalidParametersFailBeforeDependenciesAreCalled() {
-        var service = new BookingServiceImpl(null, null, null, null, null, null, null, null, null, null);
+        var service = new BookingServiceImpl(null, null, null, null, null, null, null, null, null, null, null);
         for (int[] bounds : List.of(new int[]{-1, 10}, new int[]{0, 0}, new int[]{0, 101})) {
             assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
                     () -> service.getTravelerBookingPage(7L, "all", bounds[0], bounds[1])).getStatusCode());
