@@ -6,6 +6,20 @@ import { bookingRequestFingerprint, getBookingAttemptKey } from "@/utils/booking
 
 const API_URL = "/api/bookings";
 
+export const getBookingConfirmationStatus = createAsyncThunk(
+  "booking/getConfirmationStatus",
+  async (id, { rejectWithValue, signal }) => {
+    try {
+      const res = await api.get(`${API_URL}/${id}/confirmation-status`, {
+        headers: getHeaders(), signal,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to load booking confirmation status");
+    }
+  }
+);
+
 export const getTravelerBookingPage = createAsyncThunk(
   "booking/getTravelerPage",
   async (params = {}, { rejectWithValue, signal }) => {

@@ -12,6 +12,24 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SeatInstanceRepository extends JpaRepository<SeatInstance, Long> {
+    interface BookingSeat {
+        Long getId();
+        Long getFlightId();
+        Long getFlightInstanceId();
+        Long getFlightCabinId();
+        Double getPrice();
+    }
+
+    @Query("SELECT s.id AS id, s.flightId AS flightId, s.flightInstanceId AS flightInstanceId, "
+            + "s.flightInstanceCabin.id AS flightCabinId, s.premiumSurcharge AS price "
+            + "FROM SeatInstance s WHERE s.id IN :ids")
+    List<BookingSeat> findBookingSeats(@Param("ids") List<Long> ids);
+
+    @Query("SELECT si FROM SeatInstance si JOIN FETCH si.seat s "
+            + "LEFT JOIN FETCH s.seatMap LEFT JOIN FETCH s.cabinClass "
+            + "JOIN FETCH si.flightInstanceCabin WHERE si.id IN :ids")
+    List<SeatInstance> findSelectedWithDetails(@Param("ids") List<Long> ids);
+
     List<SeatInstance> findByFlightId(Long flightId);
     List<SeatInstance> findByFlightScheduleId(Long flightScheduleId);
     List<SeatInstance> findBySeatId(Long seatId);

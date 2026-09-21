@@ -18,6 +18,24 @@ import jakarta.persistence.LockModeType;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
+    interface ConfirmationStatusRow {
+        Long getBookingId();
+        BookingStatus getStatus();
+        Long getPaymentId();
+        boolean getTicketIssued();
+        long getTicketCount();
+    }
+
+    // Scalar projection: no booking entity, passenger, or ticket collection is loaded.
+    @Query("""
+            SELECT b.id AS bookingId, b.status AS status, b.paymentId AS paymentId,
+                   b.ticketIssued AS ticketIssued, COUNT(t.id) AS ticketCount
+            FROM Booking b LEFT JOIN b.tickets t
+            WHERE b.id = :id AND b.userId = :userId
+            GROUP BY b.id, b.status, b.paymentId, b.ticketIssued
+            """)
+    Optional<ConfirmationStatusRow> findConfirmationStatus(@Param("id") Long id, @Param("userId") Long userId);
+
     Page<Booking> findByUserId(Long userId, Pageable pageable);
     Page<Booking> findByUserIdAndStatus(Long userId, BookingStatus status, Pageable pageable);
 

@@ -7,9 +7,17 @@ import java.util.List;
 
 import com.example.enums.CabinClassType;
 import com.example.payload.response.FlightInstanceCabinResponse;
+import com.example.payload.response.SeatInstanceResponse;
+import com.example.payload.response.BookingSeatSelectionResponse;
 
 @FeignClient(name = "seat-service")
 public interface SeatClient {
+    @PostMapping("/internal/booking-seat-selections/{flightInstanceId}/{cabinClassType}")
+    BookingSeatSelectionResponse getBookingSeatSelection(@PathVariable Long flightInstanceId,
+            @PathVariable CabinClassType cabinClassType, @RequestBody List<Long> seatInstanceIds);
+
+    @PostMapping("/api/seat-instances/batch-by-ids")
+    List<SeatInstanceResponse> getSelectedSeats(@RequestBody List<Long> seatInstanceIds);
 
     @PostMapping("/api/seat-instances/price/total")
     Double calculateSeatPrice(@RequestBody List<Long> seatInstanceIds);

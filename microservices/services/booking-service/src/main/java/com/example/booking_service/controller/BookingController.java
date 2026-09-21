@@ -4,10 +4,12 @@ import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.booking_service.service.BookingService;
+import com.example.booking_service.payload.BookingConfirmationStatusResponse;
 import com.example.booking_service.service.IdempotentBookingService;
 import com.example.enums.BookingStatus;
 import com.example.payload.request.BookingRequest;
@@ -49,6 +51,13 @@ public class BookingController {
             @RequestHeader("X-User-Id") Long userId) throws Exception {
         BookingResponse response = bookingService.getBookingById(id, userId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/confirmation-status")
+    public ResponseEntity<BookingConfirmationStatusResponse> getConfirmationStatus(
+            @PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(bookingService.getConfirmationStatus(id, userId));
     }
 
     @GetMapping("/airline")

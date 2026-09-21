@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.enums.SeatAvailabilityStatus;
+import com.example.payload.response.SeatInstanceResponse;
+import com.example.seat_service.mapper.SeatInstanceMapper;
 import com.example.seat_service.model.CancelledBooking;
 import com.example.seat_service.model.SeatInstance;
 import com.example.seat_service.repository.CancelledBookingRepository;
@@ -27,6 +29,17 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     private final SeatInstanceRepository seatInstanceRepository;
     private final FlightInstanceCabinRepository flightInstanceCabinRepository;
     private final CancelledBookingRepository cancelledBookingRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SeatInstanceResponse> getSelectedSeats(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        if (ids.size() > 500 || ids.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Provide at most 500 non-null seat IDs");
+        }
+        return seatInstanceRepository.findSelectedWithDetails(ids.stream().distinct().toList())
+                .stream().map(SeatInstanceMapper::toResponse).toList();
+    }
 
     @Override
     public Double calculateSeatPrice(List<Long> seatInstanceIds) {
@@ -73,13 +86,10 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
             }
         }
         for (Long cabinId : new TreeSet<>(newSeatsByCabin.keySet())) {
-            var cabin = flightInstanceCabinRepository.findByIdForUpdate(cabinId)
-                    .orElseThrow(() -> new IllegalStateException("Cabin not found: " + cabinId));
             int count = newSeatsByCabin.get(cabinId).intValue();
-            if (cabin.getBookedSeats() + count > cabin.getTotalSeats()) {
+            if (flightInstanceCabinRepository.reserveCapacity(cabinId, count) != 1) {
                 throw new IllegalStateException("Cabin capacity has been reached");
             }
-            cabin.setBookedSeats(cabin.getBookedSeats() + count);
         }
         for (SeatInstance seat : seats) {
             if (seat.getStatus() == SeatAvailabilityStatus.AVAILABLE) {
@@ -139,13 +149,10 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
             seatsByCabin.merge(seat.getFlightInstanceCabin().getId(), 1L, Long::sum);
         }
         for (Long cabinId : new TreeSet<>(seatsByCabin.keySet())) {
-            var cabin = flightInstanceCabinRepository.findByIdForUpdate(cabinId)
-                    .orElseThrow(() -> new IllegalStateException("Cabin not found: " + cabinId));
             int count = seatsByCabin.get(cabinId).intValue();
-            if (cabin.getBookedSeats() < count) {
+            if (flightInstanceCabinRepository.releaseCapacity(cabinId, count) != 1) {
                 throw new IllegalStateException("Cabin booked seat count is too low");
             }
-            cabin.setBookedSeats(cabin.getBookedSeats() - count);
         }
         for (SeatInstance seat : ownedSeats) {
             seat.setStatus(SeatAvailabilityStatus.AVAILABLE);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { getBookingById } from "@/Redux/booking/bookingThunk";
+import { getBookingById, getBookingConfirmationStatus } from "@/Redux/booking/bookingThunk";
 import { verifyPayment } from "@/Redux/payment/paymentThunk";
 import {
   CheckCircle2,
@@ -73,6 +73,17 @@ const BookingSuccess = () => {
       }
       if (!active) return;
       try {
+        if (attempt > 0 && !verificationError) {
+          request = dispatch(getBookingConfirmationStatus(bookingId));
+          const confirmation = await request.unwrap();
+          if (!active) return;
+          const paymentEnded = ['FAILED', 'CANCELLED', 'REFUNDED'].includes(verifiedPayment?.status);
+          if (!confirmation.confirmed && confirmation.status !== 'CANCELLED' && !paymentEnded && attempt < 8) {
+            setResult((previous) => ({ ...previous, verifiedPayment, verificationError }));
+            timer = setTimeout(() => fetchBooking(attempt + 1), 2000);
+            return;
+          }
+        }
         request = dispatch(getBookingById(bookingId));
         const current = await request.unwrap();
         if (!active) return;

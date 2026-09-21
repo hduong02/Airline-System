@@ -10,6 +10,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,10 +23,12 @@ import com.example.booking_service.client.FlightClient;
 import com.example.booking_service.client.PaymentClient;
 import com.example.booking_service.client.SeatClient;
 import com.example.booking_service.mapper.BookingMapper;
+import com.example.booking_service.payload.BookingConfirmationStatusResponse;
 import com.example.booking_service.model.Booking;
 import com.example.booking_service.model.Passenger;
 import com.example.booking_service.repository.BookingRepository;
 import com.example.booking_service.service.BookingService;
+import com.example.booking_service.service.BookingSelection;
 import com.example.booking_service.service.PassengerService;
 import com.example.booking_service.service.TicketService;
 import com.example.booking_service.service.integration.FareIntegrationService;
@@ -37,10 +42,10 @@ import com.example.payload.request.PassengerRequest;
 import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.BookingResponse;
+import com.example.payload.response.BookingSeatSelectionResponse;
 import com.example.payload.response.FareResponse;
 import com.example.payload.response.FlightCabinAncillaryResponse;
 import com.example.payload.response.FlightInstanceResponse;
-import com.example.payload.response.FlightInstanceCabinResponse;
 import com.example.payload.response.FlightMealResponse;
 import com.example.payload.response.FlightResponse;
 import com.example.payload.response.PaymentInitiateResponse;
@@ -53,6 +58,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.stream.Collectors;
+import java.util.concurrent.Callable;
 
 
 @Service
@@ -70,6 +76,7 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentClient paymentClient;
     private final AirlineClient airlineClient;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -130,18 +137,57 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
-            throws Exception {
-        return paymentClient.initiatePayment(prepareBooking(request, userId), userId);
+    @Transactional(propagation = Propagation.NEVER)
+    public PaymentInitiateResponse createBooking(BookingRequest request, Long userId) throws Exception {
+        BookingSelection selection = validateBooking(request);
+        // Preserve legacy rollback semantics if payment initiation fails.
+        return inBookingTransaction(() -> paymentClient.initiatePayment(
+                persistBooking(request, userId, selection), userId));
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NEVER)
     public PaymentInitiateRequest prepareBooking(BookingRequest request, Long userId) throws Exception {
-        FlightInstanceCabinResponse cabin = validateCabinCapacity(request);
-        BookingSelection selection = validateBookingSelection(request, cabin);
+        BookingSelection selection = validateBooking(request);
+        return inBookingTransaction(() -> persistBooking(request, userId, selection));
+    }
 
+    @Override
+    @Transactional(propagation = Propagation.NEVER)
+    public BookingSelection validateBooking(BookingRequest request) {
+        BookingSeatSelectionResponse cabin = validateCabinCapacity(request);
+        return validateBookingSelection(request, cabin);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public PaymentInitiateRequest prepareValidatedBooking(
+            BookingRequest request, Long userId, BookingSelection selection) throws Exception {
+        return persistBooking(request, userId, selection);
+    }
+
+    private <T> T inBookingTransaction(Callable<T> action) throws Exception {
+        try {
+            return new TransactionTemplate(transactionManager).execute(status -> {
+                try {
+                    return action.call();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new CheckedFailure(e);
+                }
+            });
+        } catch (CheckedFailure e) {
+            throw (Exception) e.getCause();
+        }
+    }
+
+    private static class CheckedFailure extends RuntimeException {
+        CheckedFailure(Exception cause) { super(cause); }
+    }
+
+    private PaymentInitiateRequest persistBooking(
+            BookingRequest request, Long userId, BookingSelection selection) throws Exception {
         // Generate unique booking reference
         String bookingReference = generateBookingReference();
 
@@ -178,11 +224,11 @@ public class BookingServiceImpl implements BookingService {
         int passengerCount = booking.getPassengers().size();
         Double fareTotal = fareIntegrationService.calculateFareTotal(
             selection.fare()) * passengerCount;
-        Double seatPrice = seatClient.calculateSeatPrice(booking.getSeatInstanceIds());
-        Double ancillaryPrice = ancillaryClient.calculateAncillariesPrice(
-                booking.getAncillaryIds());
-        Double mealPrice = ancillaryClient.calculateMealPrice(
-                booking.getMealIds());
+        double seatPrice = selection.seatPrice();
+        double ancillaryPrice = booking.getAncillaryIds() == null || booking.getAncillaryIds().isEmpty()
+                ? 0.0 : ancillaryClient.calculateAncillariesPrice(booking.getAncillaryIds());
+        double mealPrice = booking.getMealIds() == null || booking.getMealIds().isEmpty()
+                ? 0.0 : ancillaryClient.calculateMealPrice(booking.getMealIds());
 
         Double totalPrice = fareTotal + seatPrice + ancillaryPrice + mealPrice;
 
@@ -257,6 +303,18 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse getBookingById(Long id, Long userId) throws Exception {
         Booking booking = findOwnedBooking(id, userId);
         return convertToBookingResponse(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingConfirmationStatusResponse getConfirmationStatus(Long id, Long userId) {
+        var state = bookingRepository.findConfirmationStatus(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        boolean paymentReceived = state.getPaymentId() != null;
+        boolean confirmed = state.getStatus() == BookingStatus.CONFIRMED && paymentReceived
+                && state.getTicketIssued() && state.getTicketCount() > 0;
+        return new BookingConfirmationStatusResponse(state.getBookingId(), state.getStatus(),
+                paymentReceived, state.getTicketIssued(), state.getTicketCount(), confirmed);
     }
 
     @Override
@@ -338,9 +396,17 @@ public class BookingServiceImpl implements BookingService {
         return reference;
     }
 
-    private FlightInstanceCabinResponse validateCabinCapacity(BookingRequest request) {
-        FlightInstanceCabinResponse cabin = seatClient.getFlightInstanceCabin(
-                request.getFlightInstanceId(), request.getCabinClass());
+    private BookingSeatSelectionResponse validateCabinCapacity(BookingRequest request) {
+        List<Long> selectedSeatIds = request.getPassengers().stream()
+                .map(PassengerRequest::getSeatInstanceId).toList();
+        if (selectedSeatIds.contains(null) || new HashSet<>(selectedSeatIds).size() != selectedSeatIds.size()) {
+            throw new IllegalArgumentException("Each passenger must select a different seat");
+        }
+        if (selectedSeatIds.isEmpty() || selectedSeatIds.size() > 500) {
+            throw new IllegalArgumentException("Select between 1 and 500 seats");
+        }
+        BookingSeatSelectionResponse cabin = seatClient.getBookingSeatSelection(
+                request.getFlightInstanceId(), request.getCabinClass(), selectedSeatIds);
         if (cabin == null) {
             throw new IllegalArgumentException("Selected cabin does not exist");
         }
@@ -356,7 +422,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingSelection validateBookingSelection(BookingRequest request,
-            FlightInstanceCabinResponse cabin) {
+            BookingSeatSelectionResponse cabin) {
         FlightResponse flight = flightClient.getFlightById(request.getFlightId());
         FlightInstanceResponse flightInstance = flightClient.getFlightInstanceById(
                 request.getFlightInstanceId());
@@ -378,27 +444,22 @@ public class BookingServiceImpl implements BookingService {
 
         List<Long> selectedSeatIds = request.getPassengers().stream()
                 .map(PassengerRequest::getSeatInstanceId).toList();
-        if (selectedSeatIds.contains(null)
-                || new HashSet<>(selectedSeatIds).size() != selectedSeatIds.size()) {
-            throw new IllegalArgumentException("Each passenger must select a different seat");
-        }
-
-        Map<Long, SeatInstanceResponse> cabinSeats = Optional.ofNullable(cabin.getSeats())
+        Map<Long, BookingSeatSelectionResponse.Seat> cabinSeats = Optional.ofNullable(cabin.getSeats())
                 .orElseGet(List::of).stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(SeatInstanceResponse::getId, seat -> seat, (first, second) -> first));
+                .collect(Collectors.toMap(BookingSeatSelectionResponse.Seat::id, seat -> seat, (first, second) -> first));
         for (Long seatId : selectedSeatIds) {
-            SeatInstanceResponse seat = cabinSeats.get(seatId);
-            if (seat == null || !Objects.equals(seat.getFlightId(), request.getFlightId())
-                    || !Objects.equals(seat.getFlightInstanceId(), request.getFlightInstanceId())
-                    || !Objects.equals(seat.getFlightCabinId(), cabin.getId())) {
+            BookingSeatSelectionResponse.Seat seat = cabinSeats.get(seatId);
+            if (seat == null || !Objects.equals(seat.flightId(), request.getFlightId())
+                    || !Objects.equals(seat.flightInstanceId(), request.getFlightInstanceId())
+                    || !Objects.equals(seat.flightCabinId(), cabin.getId())) {
                 throw new IllegalArgumentException("Seat " + seatId + " does not belong to the selected flight instance and cabin");
             }
         }
-        return new BookingSelection(flight, fare);
+        double seatPrice = selectedSeatIds.stream().map(cabinSeats::get)
+                .mapToDouble(seat -> seat.price() == null ? 0.0 : seat.price()).sum();
+        return new BookingSelection(flight, fare, seatPrice);
     }
-
-    private record BookingSelection(FlightResponse flight, FareResponse fare) {}
 
     private BookingResponse convertToBookingResponse(Booking booking) {
         return convertToBookingResponses(List.of(booking)).getFirst();
@@ -417,6 +478,16 @@ public class BookingServiceImpl implements BookingService {
                 fareIntegrationService.getFaresByIds(fareIds)).orElseGet(Map::of);
         Map<Long, FlightResponse> flights = new HashMap<>();
         Map<Long, FlightInstanceResponse> instances = new HashMap<>();
+        List<Long> selectedSeatIds = bookings.stream()
+                .filter(booking -> booking.getSeatInstanceIds() != null)
+                .flatMap(booking -> booking.getSeatInstanceIds().stream()).distinct().toList();
+        Map<Long, SeatInstanceResponse> selectedSeats = new HashMap<>();
+        // Bound requests for large booking lists; never fetch an entire cabin for details.
+        for (int offset = 0; offset < selectedSeatIds.size(); offset += 500) {
+            List<SeatInstanceResponse> seats = seatClient.getSelectedSeats(
+                    selectedSeatIds.subList(offset, Math.min(offset + 500, selectedSeatIds.size())));
+            if (seats != null) seats.forEach(seat -> selectedSeats.put(seat.getId(), seat));
+        }
         return bookings.stream()
                 .map(booking -> convertToBookingResponse(booking,
                         payments.get(booking.getId()), booking.getFareId() == null
@@ -424,25 +495,23 @@ public class BookingServiceImpl implements BookingService {
                         booking.getFlightId() == null ? null : flights.computeIfAbsent(
                                 booking.getFlightId(), flightClient::getFlightById),
                         booking.getFlightInstanceId() == null ? null : instances.computeIfAbsent(
-                                booking.getFlightInstanceId(), flightClient::getFlightInstanceById)))
+                                booking.getFlightInstanceId(), flightClient::getFlightInstanceById), selectedSeats))
                 .toList();
     }
 
     private BookingResponse convertToBookingResponse(Booking booking,
             PaymentDto paymentDto, FareResponse fareResponse,
-            FlightResponse flightResponse, FlightInstanceResponse flightInstanceResponse) {
+            FlightResponse flightResponse, FlightInstanceResponse flightInstanceResponse,
+            Map<Long, SeatInstanceResponse> selectedSeats) {
         List<FlightCabinAncillaryResponse> ancillaryResponses = new ArrayList<>();
         List<FlightMealResponse> mealResponses = new ArrayList<>();
         List<SeatInstanceResponse> seatInstanceResponses = List.of();
         if (booking.getFlightInstanceId() != null && booking.getSeatInstanceIds() != null
                 && !booking.getSeatInstanceIds().isEmpty()) {
-            FlightInstanceCabinResponse cabin = seatClient.getFlightInstanceCabin(
-                    booking.getFlightInstanceId(), booking.getCabinClass());
-            Map<Long, SeatInstanceResponse> cabinSeats = cabin == null || cabin.getSeats() == null
-                    ? Map.of() : cabin.getSeats().stream().collect(Collectors.toMap(
-                            SeatInstanceResponse::getId, seat -> seat));
             seatInstanceResponses = booking.getSeatInstanceIds().stream()
-                    .map(cabinSeats::get).filter(Objects::nonNull).toList();
+                    .map(selectedSeats::get).filter(Objects::nonNull)
+                    .filter(seat -> Objects.equals(seat.getFlightInstanceId(), booking.getFlightInstanceId()))
+                    .toList();
         }
 
         return BookingMapper.toResponse(booking,

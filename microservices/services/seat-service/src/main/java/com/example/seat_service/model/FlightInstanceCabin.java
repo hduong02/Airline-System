@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(indexes = @Index(name = "idx_flight_instance_cabin_flight_class",
+        columnList = "flight_instance_id,cabin_class_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,10 +22,11 @@ public class FlightInstanceCabin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "flight_instance_id", nullable = false)
     private Long flightInstanceId;
 
     @ManyToOne
+    @JoinColumn(name = "cabin_class_id")
     private CabinClass cabinClass;
 
     @Column(nullable = false)

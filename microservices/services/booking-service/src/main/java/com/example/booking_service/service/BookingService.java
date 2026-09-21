@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 import com.example.enums.BookingStatus;
+import com.example.booking_service.payload.BookingConfirmationStatusResponse;
 import com.example.payload.request.BookingRequest;
 import com.example.payload.request.PaymentInitiateRequest;
 import com.example.payload.response.BookingResponse;
@@ -22,10 +23,17 @@ public interface BookingService {
 
         PaymentInitiateRequest prepareBooking(BookingRequest request, Long userId) throws Exception;
 
+        BookingSelection validateBooking(BookingRequest request);
+
+        PaymentInitiateRequest prepareValidatedBooking(
+                        BookingRequest request, Long userId, BookingSelection selection) throws Exception;
+
         BookingResponse updateBooking(Long id, BookingRequest request)
                         throws Exception;
 
         BookingResponse getBookingById(Long id, Long userId) throws Exception;
+
+        BookingConfirmationStatusResponse getConfirmationStatus(Long id, Long userId);
 
         PaymentInitiateResponse resumeCheckout(Long id, Long userId) throws Exception;
 

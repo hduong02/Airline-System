@@ -52,6 +52,8 @@ public class IdempotentBookingService {
         String normalizedKey = key.toLowerCase(java.util.Locale.ROOT);
         String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(json.writeValueAsString(request).getBytes(StandardCharsets.UTF_8)));
+        // Replays bypass live validation, even when the selected inventory has changed.
+        BookingSelection selection = validateNewAttempt(request, userId, normalizedKey);
         Long attemptId;
         try {
             attemptId = inTransaction(() -> {
@@ -61,9 +63,9 @@ public class IdempotentBookingService {
                 attempt.setUserId(userId);
                 attempt.setIdempotencyKey(normalizedKey);
                 attempt.setRequestHash(hash);
-                // Claim the unique key before creating passengers or calling other services.
+                // Claim the unique key before persisting passengers or reserving seats.
                 attempts.saveAndFlush(attempt);
-                PaymentInitiateRequest payment = bookingService.prepareBooking(request, userId);
+                PaymentInitiateRequest payment = bookingService.prepareValidatedBooking(request, userId, selection);
                 attempt.setBookingId(payment.getBookingId());
                 attempt.setPaymentRequest(json.writeValueAsString(payment));
                 return attempt.getId();
@@ -95,6 +97,18 @@ public class IdempotentBookingService {
             attempt.setCheckoutResponse(json.writeValueAsString(response));
             return response;
         });
+    }
+
+    private BookingSelection validateNewAttempt(BookingRequest request, Long userId, String key) {
+        if (attempts.findByUserIdAndIdempotencyKey(userId, key).isPresent()) return null;
+        try {
+            return bookingService.validateBooking(request);
+        } catch (RuntimeException failure) {
+            // A concurrent request may have committed this key and consumed the seats
+            // while validation was running. Replay that attempt instead of rejecting it.
+            if (attempts.findByUserIdAndIdempotencyKey(userId, key).isPresent()) return null;
+            throw failure;
+        }
     }
 
     private <T> T inTransaction(Callable<T> action) throws Exception {

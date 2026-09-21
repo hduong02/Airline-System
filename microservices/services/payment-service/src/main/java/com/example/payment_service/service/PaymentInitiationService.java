@@ -92,6 +92,7 @@ public class PaymentInitiationService {
             PaymentLinkResponse link) {
         return PaymentInitiateResponse.builder()
                 .paymentId(payment.getId())
+                .bookingId(payment.getBookingId())
                 .gateway(payment.getProvider())
                 .transactionId(payment.getTransactionId())
                 .amount(payment.getAmount())

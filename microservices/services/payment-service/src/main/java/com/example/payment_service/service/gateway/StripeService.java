@@ -1,6 +1,8 @@
 package com.example.payment_service.service.gateway;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.util.Set;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -18,6 +20,9 @@ import lombok.RequiredArgsConstructor;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,8 +35,27 @@ public class StripeService {
     @Value("${stripe.callback.base-url}")
     private String callbackBaseUrl;
 
+    @Value("${stripe.api.base-url:https://api.stripe.com}")
+    private String apiBaseUrl = "https://api.stripe.com";
+
+    @Autowired
+    private Environment environment;
+
     @PostConstruct
     public void init() {
+        boolean loadTest = environment != null && environment.acceptsProfiles(Profiles.of("load-test"));
+        boolean realStripe = "https://api.stripe.com".equals(apiBaseUrl);
+        if (loadTest && (realStripe || !"sk_test_simulator".equals(stripeApiKey))) {
+            throw new IllegalStateException("load-test requires a simulator URL and the simulator dummy key");
+        }
+        if (loadTest && !Set.of("stripe-simulator", "localhost", "127.0.0.1")
+                .contains(URI.create(apiBaseUrl).getHost())) {
+            throw new IllegalStateException("load-test may only contact the private simulator or loopback");
+        }
+        if (!loadTest && !realStripe) {
+            throw new IllegalStateException("Custom Stripe API URLs require the load-test profile");
+        }
+        Stripe.overrideApiBase(apiBaseUrl);
         if (isConfigured()) {
             Stripe.apiKey = stripeApiKey;
         }
