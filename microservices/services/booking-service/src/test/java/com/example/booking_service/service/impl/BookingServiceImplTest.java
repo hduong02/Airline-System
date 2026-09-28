@@ -43,6 +43,7 @@ import com.example.payload.response.BookingSeatSelectionResponse;
 import com.example.payload.response.FareResponse;
 import com.example.payload.response.FlightInstanceResponse;
 import com.example.payload.response.FlightResponse;
+import com.example.payload.response.BookingFlightValidationResponse;
 import com.example.payload.response.AirlineResponse;
 import com.example.payload.response.SeatInstanceResponse;
 import com.example.payload.response.BookingResponse;
@@ -66,6 +67,53 @@ class BookingServiceImplTest {
             bookingRepository, passengerService, ticketService, flightClient, seatClient,
             ancillaryClient, fareIntegrationService, paymentClient, airlineClient,
             applicationEventPublisher, mock(org.springframework.transaction.PlatformTransactionManager.class));
+
+    @Test
+    void validationAndPricingRequestsOverlapBeforePersistence() throws Exception {
+        var request = bookingRequest(100L);
+        request.setAncillaryIds(List.of(60L));
+        request.setMealIds(List.of(70L));
+        var started = new java.util.concurrent.CountDownLatch(5);
+        when(seatClient.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L)))
+                .thenAnswer(invocation -> concurrentResult(started, cabin(SeatInstanceResponse.builder()
+                        .id(100L).flightId(10L).flightInstanceId(20L).flightCabinId(40L).price(10.0).build())));
+        when(flightClient.getBookingValidation(20L)).thenAnswer(invocation -> concurrentResult(started,
+                new BookingFlightValidationResponse(10L, 20L, 50L)));
+        when(fareIntegrationService.getFareById(30L)).thenAnswer(invocation -> concurrentResult(started,
+                FareResponse.builder().flightId(10L).cabinClass(CabinClassType.ECONOMY).build()));
+        when(ancillaryClient.calculateAncillariesPrice(List.of(60L)))
+                .thenAnswer(invocation -> concurrentResult(started, 15.0));
+        when(ancillaryClient.calculateMealPrice(List.of(70L)))
+                .thenAnswer(invocation -> concurrentResult(started, 5.0));
+        when(fareIntegrationService.calculateFareTotal(org.mockito.ArgumentMatchers.any(FareResponse.class)))
+                .thenReturn(100.0);
+        when(passengerService.createPassenger(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(1L))).thenReturn(Passenger.builder().build());
+        when(bookingRepository.save(org.mockito.ArgumentMatchers.any(Booking.class)))
+                .thenAnswer(invocation -> {
+                    Booking booking = invocation.getArgument(0);
+                    booking.setId(99L);
+                    return booking;
+                });
+
+        var payment = bookingService.prepareBooking(request, 1L);
+
+        assertEquals(130.0, payment.getAmount());
+        verify(flightClient).getBookingValidation(20L);
+        verify(flightClient, never()).getFlightById(org.mockito.ArgumentMatchers.anyLong());
+        verify(flightClient, never()).getFlightInstanceById(org.mockito.ArgumentMatchers.anyLong());
+        verify(bookingRepository).save(org.mockito.ArgumentMatchers.argThat(b -> Long.valueOf(50L).equals(b.getAirlineId())));
+        verify(seatClient).reserveBookingSeats(99L, List.of(100L));
+    }
+
+    private <T> T concurrentResult(java.util.concurrent.CountDownLatch started, T result)
+            throws InterruptedException {
+        verifyNoInteractions(bookingRepository, passengerService, paymentClient);
+        started.countDown();
+        org.junit.jupiter.api.Assertions.assertTrue(started.await(3, java.util.concurrent.TimeUnit.SECONDS),
+                "All five independent lookups must start before any lookup completes");
+        return result;
+    }
 
     @Test
     void resumeCheckoutUsesExistingPaymentAmountAndGateway() throws Exception {
@@ -138,10 +186,8 @@ class BookingServiceImplTest {
                 org.mockito.ArgumentMatchers.eq(CabinClassType.ECONOMY), org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(cabin(SeatInstanceResponse.builder().id(100L)
                         .flightId(10L).flightInstanceId(20L).flightCabinId(40L).build()));
-        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder()
-                .id(10L).airline(AirlineResponse.builder().id(50L).build()).build());
-        when(flightClient.getFlightInstanceById(20L))
-                .thenReturn(FlightInstanceResponse.builder().flightId(10L).build());
+        when(flightClient.getBookingValidation(20L))
+                .thenReturn(new BookingFlightValidationResponse(10L, 20L, 50L));
         validFare();
         when(passengerService.createPassenger(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.eq(1L))).thenReturn(Passenger.builder().build());
@@ -195,8 +241,7 @@ class BookingServiceImplTest {
         assertThrows(IllegalArgumentException.class,
                 () -> bookingService.createBooking(request, 1L));
 
-        verifyNoInteractions(bookingRepository, passengerService, ticketService, flightClient,
-                ancillaryClient, fareIntegrationService, paymentClient, airlineClient);
+        verifyNoInteractions(bookingRepository, passengerService, ticketService, paymentClient, airlineClient);
     }
 
     @Test
@@ -205,11 +250,36 @@ class BookingServiceImplTest {
         when(seatClient.getBookingSeatSelection(org.mockito.ArgumentMatchers.eq(20L),
                 org.mockito.ArgumentMatchers.eq(CabinClassType.ECONOMY), org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(cabin());
-        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder().id(10L).build());
-        when(flightClient.getFlightInstanceById(20L))
-                .thenReturn(FlightInstanceResponse.builder().flightId(11L).build());
+        when(flightClient.getBookingValidation(20L))
+                .thenReturn(new BookingFlightValidationResponse(11L, 20L, 50L));
 
         assertThrows(IllegalArgumentException.class, () -> bookingService.createBooking(request, 1L));
+        verifyNoInteractions(bookingRepository, passengerService, ticketService, paymentClient);
+    }
+
+    @Test
+    void validationRejectsMissingOrInconsistentFlightIdentityBeforeWriting() {
+        when(seatClient.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L)))
+                .thenReturn(cabin());
+        for (BookingFlightValidationResponse response : java.util.Arrays.asList(null,
+                new BookingFlightValidationResponse(10L, 21L, 50L),
+                new BookingFlightValidationResponse(10L, 20L, null))) {
+            when(flightClient.getBookingValidation(20L)).thenReturn(response);
+            assertThrows(IllegalArgumentException.class, () -> bookingService.validateBooking(bookingRequest(100L)));
+        }
+        verifyNoInteractions(bookingRepository, passengerService, ticketService, paymentClient);
+    }
+
+    @Test
+    void validationPropagatesFlightLookupFailureWithoutFetchingDisplayDetails() {
+        when(seatClient.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L)))
+                .thenReturn(cabin());
+        var failure = new ResponseStatusException(HttpStatus.NOT_FOUND, "Flight instance not found");
+        when(flightClient.getBookingValidation(20L)).thenThrow(failure);
+        assertEquals(failure, assertThrows(ResponseStatusException.class,
+                () -> bookingService.validateBooking(bookingRequest(100L))));
+        verify(flightClient, never()).getFlightById(org.mockito.ArgumentMatchers.anyLong());
+        verify(flightClient, never()).getFlightInstanceById(org.mockito.ArgumentMatchers.anyLong());
         verifyNoInteractions(bookingRepository, passengerService, ticketService, paymentClient);
     }
 
@@ -479,9 +549,8 @@ class BookingServiceImplTest {
     }
 
     private void validFlight() {
-        when(flightClient.getFlightById(10L)).thenReturn(FlightResponse.builder().id(10L).build());
-        when(flightClient.getFlightInstanceById(20L))
-                .thenReturn(FlightInstanceResponse.builder().flightId(10L).build());
+        when(flightClient.getBookingValidation(20L))
+                .thenReturn(new BookingFlightValidationResponse(10L, 20L, 50L));
     }
 
     private void validFare() {

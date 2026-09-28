@@ -163,29 +163,54 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentDto reconcileExpiredCheckout(Long bookingId) throws Exception {
-        Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No payment found for booking: " + bookingId));
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            return PaymentMapper.toDto(payment);
+        var read = new TransactionTemplate(transactionManager);
+        read.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
+        read.setReadOnly(true);
+        var snapshot = Objects.requireNonNull(read.execute(status ->
+                paymentRepository.findCheckoutVerificationSnapshot(bookingId)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No payment found for booking: " + bookingId))));
+        if (snapshot.status() != PaymentStatus.PENDING) {
+            return read.execute(status -> PaymentMapper.toDto(paymentRepository.findById(snapshot.paymentId())
+                    .orElseThrow(() -> new IllegalStateException("No payment found for booking: " + bookingId))));
         }
-        if (payment.getCheckoutSessionId() == null) {
+        if (snapshot.checkoutSessionId() == null || snapshot.checkoutSessionId().isBlank()) {
             throw new IllegalStateException("Checkout Session is missing for booking: " + bookingId);
         }
 
-        var checkout = stripeService.reconcileCheckoutSession(payment.getCheckoutSessionId());
-        if (checkout.outcome() == CheckoutOutcome.PAID) {
-            payment.setProviderPaymentId(checkout.paymentIntentId());
-            return saveAndPublish(payment, true, "succeeded");
-        }
-        if (checkout.outcome() == CheckoutOutcome.EXPIRED) {
-            payment.setStatus(PaymentStatus.CANCELLED);
-            payment.setFailureReason("Checkout expired before payment");
-            return PaymentMapper.toDto(paymentRepository.save(payment));
-        }
-        return PaymentMapper.toDto(payment);
+        // Stripe may retrieve, expire, then retrieve again. Hold no database lock or
+        // transaction while it resolves payment-versus-expiry at the provider.
+        var checkout = stripeService.reconcileCheckoutSession(snapshot.checkoutSessionId());
+        var write = new TransactionTemplate(transactionManager);
+        write.setPropagationBehavior(Propagation.REQUIRES_NEW.value());
+        return write.execute(status -> {
+            Payment payment = paymentRepository.findByBookingIdForUpdate(bookingId)
+                    .orElseThrow(() -> new IllegalStateException("No payment found for booking: " + bookingId));
+            // A verification or another expiry may have committed while Stripe was in flight.
+            // Preserve its terminal result and avoid publishing duplicate events.
+            if (payment.getStatus() != PaymentStatus.PENDING) {
+                return PaymentMapper.toDto(payment);
+            }
+            if (!snapshot.paymentId().equals(payment.getId())
+                    || !snapshot.checkoutSessionId().equals(payment.getCheckoutSessionId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout Session changed during expiry");
+            }
+            if (checkout.outcome() == CheckoutOutcome.PAID) {
+                if (checkout.paymentIntentId() == null || checkout.paymentIntentId().isBlank()) {
+                    throw new IllegalStateException("Paid Checkout Session has no PaymentIntent");
+                }
+                payment.setProviderPaymentId(checkout.paymentIntentId());
+                return saveAndPublish(payment, true, "succeeded");
+            }
+            if (checkout.outcome() == CheckoutOutcome.EXPIRED) {
+                payment.setStatus(PaymentStatus.CANCELLED);
+                payment.setFailureReason("Checkout expired before payment");
+                return PaymentMapper.toDto(paymentRepository.save(payment));
+            }
+            return PaymentMapper.toDto(payment);
+        });
     }
 
     // Persists the verified payment and publishes the corresponding event

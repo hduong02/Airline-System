@@ -3,6 +3,7 @@ package com.example.seat_service.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import com.example.enums.SeatAvailabilityStatus;
 import com.example.payload.response.SeatInstanceResponse;
@@ -55,13 +56,11 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void reserveBookingSeats(Long bookingId, List<Long> seatInstanceIds) {
         if (seatInstanceIds == null || seatInstanceIds.isEmpty()
                 || seatInstanceIds.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Seat instance IDs are required");
-        }
-        if (cancelledBookingRepository.existsById(bookingId)) {
-            throw new IllegalStateException("Booking has already been cancelled: " + bookingId);
         }
         // Lock every requested seat in a stable order before changing any of them.
         List<SeatInstance> seats = new ArrayList<>();
@@ -77,6 +76,11 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
         }
         if (seats.isEmpty() || seats.size() != seatInstanceIds.size()) {
             throw new IllegalArgumentException("A distinct seat is required for each passenger");
+        }
+        // A release may have committed while this request waited for the seat locks.
+        // READ_COMMITTED makes this check see that cancellation tombstone.
+        if (cancelledBookingRepository.existsById(bookingId)) {
+            throw new IllegalStateException("Booking has already been cancelled: " + bookingId);
         }
 
         Map<Long, Long> newSeatsByCabin = new LinkedHashMap<>();

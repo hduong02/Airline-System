@@ -1,6 +1,7 @@
 package com.example.flight_service.repository;
 
 import com.example.flight_service.model.FlightInstance;
+import com.example.payload.response.BookingFlightValidationResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,10 +10,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 
 public interface FlightInstanceRepository extends
         JpaRepository<FlightInstance, Long>, JpaSpecificationExecutor<FlightInstance> {
+
+    @Query("""
+            SELECT new com.example.payload.response.BookingFlightValidationResponse(f.id, fi.id, f.airlineId)
+            FROM FlightInstance fi JOIN fi.flight f WHERE fi.id = :id
+            """)
+    Optional<BookingFlightValidationResponse> findBookingValidationById(
+            @Param("id") Long id);
 
     @Query("""
             SELECT fi.id FROM FlightInstance fi WHERE fi.id IN :ids

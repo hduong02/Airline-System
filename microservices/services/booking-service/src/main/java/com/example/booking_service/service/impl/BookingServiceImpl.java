@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageImpl;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import io.micrometer.core.instrument.Metrics;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ import com.example.payload.response.FlightCabinAncillaryResponse;
 import com.example.payload.response.FlightInstanceResponse;
 import com.example.payload.response.FlightMealResponse;
 import com.example.payload.response.FlightResponse;
+import com.example.payload.response.BookingFlightValidationResponse;
 import com.example.payload.response.PaymentInitiateResponse;
 import com.example.payload.response.SeatInstanceResponse;
 
@@ -59,6 +61,9 @@ import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.stream.Collectors;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 @Service
@@ -155,15 +160,41 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(propagation = Propagation.NEVER)
     public BookingSelection validateBooking(BookingRequest request) {
-        BookingSeatSelectionResponse cabin = validateCabinCapacity(request);
-        return validateBookingSelection(request, cabin);
+        List<Long> selectedSeatIds = validateSeatIds(request);
+        // At most five read-only remote calls per booking. Scope their lifetime to validation;
+        // no database transaction or request-thread state is shared with these workers.
+        try (var lookups = Executors.newVirtualThreadPerTaskExecutor()) {
+            var cabin = lookups.submit(() -> validateCabinCapacity(request, selectedSeatIds));
+            var flight = lookups.submit(() -> flightClient.getBookingValidation(request.getFlightInstanceId()));
+            var fare = lookups.submit(() -> fareIntegrationService.getFareById(request.getFareId()));
+            var ancillaryPrice = lookups.submit(() -> request.getAncillaryIds() == null || request.getAncillaryIds().isEmpty()
+                    ? 0.0 : ancillaryClient.calculateAncillariesPrice(request.getAncillaryIds()));
+            var mealPrice = lookups.submit(() -> request.getMealIds() == null || request.getMealIds().isEmpty()
+                    ? 0.0 : ancillaryClient.calculateMealPrice(request.getMealIds()));
+            return validateBookingSelection(request, awaitLookup(cabin), awaitLookup(flight),
+                    awaitLookup(fare), awaitLookup(ancillaryPrice), awaitLookup(mealPrice));
+        }
+    }
+
+    private static <T> T awaitLookup(Future<T> lookup) {
+        try {
+            return lookup.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Booking validation was interrupted", e);
+        } catch (ExecutionException e) {
+            // Preserve HTTP and validation failures for the existing exception handlers.
+            if (e.getCause() instanceof RuntimeException failure) throw failure;
+            if (e.getCause() instanceof Error failure) throw failure;
+            throw new IllegalStateException("Booking validation failed", e.getCause());
+        }
     }
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
     public PaymentInitiateRequest prepareValidatedBooking(
             BookingRequest request, Long userId, BookingSelection selection) throws Exception {
-        return persistBooking(request, userId, selection);
+        return persistBooking(request, userId, selection, false);
     }
 
     private <T> T inBookingTransaction(Callable<T> action) throws Exception {
@@ -188,6 +219,11 @@ public class BookingServiceImpl implements BookingService {
 
     private PaymentInitiateRequest persistBooking(
             BookingRequest request, Long userId, BookingSelection selection) throws Exception {
+        return persistBooking(request, userId, selection, true);
+    }
+
+    private PaymentInitiateRequest persistBooking(
+            BookingRequest request, Long userId, BookingSelection selection, boolean reserveImmediately) throws Exception {
         // Generate unique booking reference
         String bookingReference = generateBookingReference();
 
@@ -204,7 +240,7 @@ public class BookingServiceImpl implements BookingService {
                 request, userId, passengers, bookingReference);
         
         // Airline ID from the validated flight
-        booking.setAirlineId(selection.flight().getAirline().getId());
+        booking.setAirlineId(selection.airlineId());
 
         // Set seat instance IDs from passenger requests
         List<Long> seatInstanceIds = request.getPassengers().stream()
@@ -225,23 +261,41 @@ public class BookingServiceImpl implements BookingService {
         Double fareTotal = fareIntegrationService.calculateFareTotal(
             selection.fare()) * passengerCount;
         double seatPrice = selection.seatPrice();
-        double ancillaryPrice = booking.getAncillaryIds() == null || booking.getAncillaryIds().isEmpty()
-                ? 0.0 : ancillaryClient.calculateAncillariesPrice(booking.getAncillaryIds());
-        double mealPrice = booking.getMealIds() == null || booking.getMealIds().isEmpty()
-                ? 0.0 : ancillaryClient.calculateMealPrice(booking.getMealIds());
+        Double totalPrice = fareTotal + seatPrice + selection.ancillaryPrice() + selection.mealPrice();
 
-        Double totalPrice = fareTotal + seatPrice + ancillaryPrice + mealPrice;
+        if (reserveImmediately) reserveLegacyBooking(booking);
+        // Also bounds recovery of a provisional booking whose reservation never completes.
+        booking.setHoldExpiresAt(Instant.now().plus(Duration.ofMinutes(30)));
 
+        // Initiate payment
+        PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
+                .userId(userId)
+                .bookingId(booking.getId())
+                .amount(totalPrice)
+                .gateway(PaymentGateway.STRIPE)
+                .description("Payment for booking reference: " + bookingReference)
+                .build();
+        return paymentRequest;
+    }
+
+    private void reserveLegacyBooking(Booking booking) {
+        long reservationStarted = System.nanoTime();
+        boolean reservationSucceeded = false;
         try {
             seatClient.reserveBookingSeats(booking.getId(), booking.getSeatInstanceIds());
+            reservationSucceeded = true;
         } catch (FeignException e) {
             if (e.status() == 409) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Selected seat is no longer available", e);
             }
             throw e;
+        } finally {
+            // Compare this remote span with Hikari's actual checkout-to-return usage timer.
+            // No booking/user IDs as tags: cardinality stays bounded under load.
+            Metrics.timer("booking.seat.reservation", "outcome", reservationSucceeded ? "success" : "failure")
+                    .record(System.nanoTime() - reservationStarted, java.util.concurrent.TimeUnit.NANOSECONDS);
         }
-        booking.setHoldExpiresAt(Instant.now().plus(Duration.ofMinutes(30)));
         Long reservedBookingId = booking.getId();
         List<Long> reservedSeatIds = List.copyOf(booking.getSeatInstanceIds());
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -258,17 +312,6 @@ public class BookingServiceImpl implements BookingService {
                 }
             });
         }
-
-        // Initiate payment
-        PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
-                .userId(userId)
-                .bookingId(booking.getId())
-                .amount(totalPrice)
-                .gateway(PaymentGateway.STRIPE)
-                .description("Payment for booking reference: " + bookingReference)
-                .build();
-        
-        return paymentRequest;
     }
 
     @Override
@@ -396,7 +439,7 @@ public class BookingServiceImpl implements BookingService {
         return reference;
     }
 
-    private BookingSeatSelectionResponse validateCabinCapacity(BookingRequest request) {
+    private List<Long> validateSeatIds(BookingRequest request) {
         List<Long> selectedSeatIds = request.getPassengers().stream()
                 .map(PassengerRequest::getSeatInstanceId).toList();
         if (selectedSeatIds.contains(null) || new HashSet<>(selectedSeatIds).size() != selectedSeatIds.size()) {
@@ -405,6 +448,10 @@ public class BookingServiceImpl implements BookingService {
         if (selectedSeatIds.isEmpty() || selectedSeatIds.size() > 500) {
             throw new IllegalArgumentException("Select between 1 and 500 seats");
         }
+        return selectedSeatIds;
+    }
+
+    private BookingSeatSelectionResponse validateCabinCapacity(BookingRequest request, List<Long> selectedSeatIds) {
         BookingSeatSelectionResponse cabin = seatClient.getBookingSeatSelection(
                 request.getFlightInstanceId(), request.getCabinClass(), selectedSeatIds);
         if (cabin == null) {
@@ -422,16 +469,13 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingSelection validateBookingSelection(BookingRequest request,
-            BookingSeatSelectionResponse cabin) {
-        FlightResponse flight = flightClient.getFlightById(request.getFlightId());
-        FlightInstanceResponse flightInstance = flightClient.getFlightInstanceById(
-                request.getFlightInstanceId());
-        if (flight == null || flightInstance == null
-                || !Objects.equals(flightInstance.getFlightId(), request.getFlightId())) {
+            BookingSeatSelectionResponse cabin, BookingFlightValidationResponse flight,
+            FareResponse fare, double ancillaryPrice, double mealPrice) {
+        if (flight == null || !Objects.equals(flight.flightId(), request.getFlightId())
+                || !Objects.equals(flight.flightInstanceId(), request.getFlightInstanceId()) || flight.airlineId() == null) {
             throw new IllegalArgumentException("Flight instance does not belong to the selected flight");
         }
 
-        FareResponse fare = fareIntegrationService.getFareById(request.getFareId());
         if (fare == null || !Objects.equals(fare.getFlightId(), request.getFlightId())
                 || fare.getCabinClass() != request.getCabinClass()) {
             throw new IllegalArgumentException("Fare does not belong to the selected flight and cabin");
@@ -458,7 +502,7 @@ public class BookingServiceImpl implements BookingService {
         }
         double seatPrice = selectedSeatIds.stream().map(cabinSeats::get)
                 .mapToDouble(seat -> seat.price() == null ? 0.0 : seat.price()).sum();
-        return new BookingSelection(flight, fare, seatPrice);
+        return new BookingSelection(flight.airlineId(), fare, seatPrice, ancillaryPrice, mealPrice);
     }
 
     private BookingResponse convertToBookingResponse(Booking booking) {

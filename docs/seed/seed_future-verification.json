@@ -1,0 +1,237 @@
+{
+  "locationdb.city": 17,
+  "locationdb.airport": 17,
+  "userdb.users": 50010,
+  "airlinedb.airline": 9,
+  "airlinedb.aircraft": 272,
+  "seatdb.cabin_class": 544,
+  "seatdb.seat_map": 544,
+  "seatdb.seats": 32640,
+  "flightdb.flight": 272,
+  "flightdb.flight_schedule": 272,
+  "flightdb.flight_schedule_operating_days": 1904,
+  "flightdb.flight_instance": 21216,
+  "pricingdb.fare": 544,
+  "pricingdb.fare_rules": 544,
+  "pricingdb.baggage_policy": 544,
+  "seatdb.flight_instance_cabin": 42432,
+  "seatdb.seat_instance": 2545920,
+  "empty:seatdb.cancelled_booking": 0,
+  "empty:bookingdb.booking": 0,
+  "empty:bookingdb.booking_ancillary_ids": 0,
+  "empty:bookingdb.booking_meal_ids": 0,
+  "empty:bookingdb.booking_seat_instance_ids": 0,
+  "empty:bookingdb.passenger": 0,
+  "empty:bookingdb.tickets": 0,
+  "empty:paymentdb.payment": 0,
+  "empty:ancillarydb.ancillary": 0,
+  "empty:ancillarydb.flight_cabin_ancillary": 0,
+  "empty:ancillarydb.flight_meal": 0,
+  "empty:ancillarydb.insurance_coverage": 0,
+  "empty:ancillarydb.meal": 0,
+  "travelers": 50000,
+  "owners": 9,
+  "admins": 1,
+  "unique_emails": 50010,
+  "instance_dates": 0,
+  "daily_routes": 0,
+  "duplicate_routes": 0,
+  "self_routes": 0,
+  "schedules": 0,
+  "weekdays": 0,
+  "inventory": 0,
+  "cabin_inventory": 0,
+  "instance_inventory": 0,
+  "physical_links": 0,
+  "cabins": 0,
+  "fares": 0,
+  "fare_links": 0,
+  "durations": 0,
+  "instance_refs": 0,
+  "seat_flight_refs": 0,
+  "overnight_instances": 9984,
+  "arrivals_in_2027": 128,
+  "table_storage_bytes": 574914560,
+  "storage": [
+    [
+      "locationdb",
+      "airport",
+      "16384",
+      "32768"
+    ],
+    [
+      "locationdb",
+      "city",
+      "16384",
+      "16384"
+    ],
+    [
+      "userdb",
+      "users",
+      "8929280",
+      "2637824"
+    ],
+    [
+      "airlinedb",
+      "aircraft",
+      "81920",
+      "32768"
+    ],
+    [
+      "airlinedb",
+      "airline",
+      "16384",
+      "32768"
+    ],
+    [
+      "seatdb",
+      "cabin_class",
+      "81920",
+      "0"
+    ],
+    [
+      "seatdb",
+      "cancelled_booking",
+      "16384",
+      "0"
+    ],
+    [
+      "seatdb",
+      "flight_instance_cabin",
+      "2637824",
+      "2637824"
+    ],
+    [
+      "seatdb",
+      "seat_instance",
+      "308150272",
+      "235356160"
+    ],
+    [
+      "seatdb",
+      "seat_map",
+      "81920",
+      "16384"
+    ],
+    [
+      "seatdb",
+      "seats",
+      "4734976",
+      "5275648"
+    ],
+    [
+      "flightdb",
+      "flight",
+      "49152",
+      "0"
+    ],
+    [
+      "flightdb",
+      "flight_instance",
+      "2637824",
+      "491520"
+    ],
+    [
+      "flightdb",
+      "flight_schedule",
+      "49152",
+      "16384"
+    ],
+    [
+      "flightdb",
+      "flight_schedule_operating_days",
+      "98304",
+      "65536"
+    ],
+    [
+      "pricingdb",
+      "baggage_policy",
+      "114688",
+      "16384"
+    ],
+    [
+      "pricingdb",
+      "fare",
+      "114688",
+      "0"
+    ],
+    [
+      "pricingdb",
+      "fare_rules",
+      "98304",
+      "16384"
+    ],
+    [
+      "bookingdb",
+      "booking",
+      "16384",
+      "0"
+    ],
+    [
+      "bookingdb",
+      "booking_ancillary_ids",
+      "16384",
+      "16384"
+    ],
+    [
+      "bookingdb",
+      "booking_meal_ids",
+      "16384",
+      "16384"
+    ],
+    [
+      "bookingdb",
+      "booking_seat_instance_ids",
+      "16384",
+      "16384"
+    ],
+    [
+      "bookingdb",
+      "passenger",
+      "16384",
+      "16384"
+    ],
+    [
+      "bookingdb",
+      "tickets",
+      "16384",
+      "32768"
+    ],
+    [
+      "paymentdb",
+      "payment",
+      "16384",
+      "0"
+    ],
+    [
+      "ancillarydb",
+      "ancillary",
+      "16384",
+      "0"
+    ],
+    [
+      "ancillarydb",
+      "flight_cabin_ancillary",
+      "16384",
+      "16384"
+    ],
+    [
+      "ancillarydb",
+      "flight_meal",
+      "16384",
+      "16384"
+    ],
+    [
+      "ancillarydb",
+      "insurance_coverage",
+      "16384",
+      "16384"
+    ],
+    [
+      "ancillarydb",
+      "meal",
+      "16384",
+      "0"
+    ]
+  ]
+}

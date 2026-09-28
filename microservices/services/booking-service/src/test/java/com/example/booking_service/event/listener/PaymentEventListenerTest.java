@@ -34,11 +34,12 @@ class PaymentEventListenerTest {
     private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
     private final PaymentEventListener listener = new PaymentEventListener(
             producer, repository, flightClient, pricingClient, userClient,
-            ticketService, publisher);
+            ticketService, publisher, mock(org.springframework.transaction.PlatformTransactionManager.class));
 
     @Test
     void completedPaymentIssuesTicketsOnce() {
         Booking booking = Booking.builder().id(99L).status(BookingStatus.PENDING).build();
+        when(repository.findById(99L)).thenReturn(Optional.of(booking));
         when(repository.findByIdForUpdate(99L)).thenReturn(Optional.of(booking));
         when(repository.save(booking)).thenReturn(booking);
 
@@ -72,11 +73,21 @@ class PaymentEventListenerTest {
     @Test
     void lateSuccessfulPaymentCannotConfirmCancelledBooking() {
         Booking booking = Booking.builder().id(99L).status(BookingStatus.CANCELLED).build();
+        when(repository.findById(99L)).thenReturn(Optional.of(booking));
         when(repository.findByIdForUpdate(99L)).thenReturn(Optional.of(booking));
 
         listener.handlePaymentCompleted(PaymentCompletedEvent.builder().bookingId(99L).build());
 
         assertEquals(BookingStatus.CANCELLED, booking.getStatus());
-        verifyNoInteractions(producer, ticketService, publisher);
+        verifyNoInteractions(producer, ticketService, publisher, flightClient, pricingClient, userClient);
+        verify(repository, org.mockito.Mockito.never()).findByIdForUpdate(99L);
+    }
+
+    @Test
+    void completedPaymentForMissingBookingDoesNothing() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+        listener.handlePaymentCompleted(PaymentCompletedEvent.builder().bookingId(99L).build());
+        verifyNoInteractions(producer, ticketService, publisher, flightClient, pricingClient, userClient);
+        verify(repository, org.mockito.Mockito.never()).findByIdForUpdate(99L);
     }
 }

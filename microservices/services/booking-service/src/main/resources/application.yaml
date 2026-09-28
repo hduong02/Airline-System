@@ -1,6 +1,8 @@
 spring:
   application:
     name: booking-service
+  jpa:
+    open-in-view: false
 
   config:
     import: optional:configserver:http://localhost:8888

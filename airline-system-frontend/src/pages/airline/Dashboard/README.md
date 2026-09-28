@@ -165,7 +165,7 @@ The components are designed to work seamlessly with your backend DTOs. Simply im
 - Built with TailwindCSS
 - Uses shadcn/ui components
 - Responsive design
-- Dark/light theme support
+- Light theme
 - Modern, professional UI
 
 ## Dependencies

@@ -25,6 +25,7 @@ public interface BookingService {
 
         BookingSelection validateBooking(BookingRequest request);
 
+        /** Persist the provisional booking only; the caller durably schedules seat reservation. */
         PaymentInitiateRequest prepareValidatedBooking(
                         BookingRequest request, Long userId, BookingSelection selection) throws Exception;
 

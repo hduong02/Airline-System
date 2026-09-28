@@ -1,0 +1,100 @@
+15:14:22.804 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+15:14:23.103 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Finished Spring Data repository scanning in 239 ms. Found 1 JPA repository interface.
+15:14:23.465 [main] INFO org.hibernate.orm.jpa -- HHH008540: Processing PersistenceUnitInfo [name: default]
+15:14:23.562 [main] INFO org.hibernate.orm.core -- HHH000001: Hibernate ORM core version 7.4.1.Final
+15:14:24.458 [main] INFO org.springframework.orm.jpa.persistenceunit.SpringPersistenceUnitInfo -- No LoadTimeWeaver setup: ignoring JPA class transformer
+15:14:25.539 [main] INFO org.hibernate.orm.connections.pooling -- HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://paymentdb:3306/recovery_test_5ec311d149744977a3b12a9a28a156cb]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.0.46
+	Default catalog/schema: recovery_test_5ec311d149744977a3b12a9a28a156cb/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+15:14:26.484 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 9.1.0.Final
+15:14:27.585 [main] INFO org.hibernate.orm.core -- HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+15:14:27.887 [main] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Initialized JPA EntityManagerFactory for persistence unit 'default'
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+15:14:28.882 [main] INFO org.springframework.data.jpa.repository.query.QueryEnhancerFactories -- Hibernate is in classpath; If applicable, HQL parser will be used.
+15:14:33.847 [pool-1-thread-2] WARN org.hibernate.orm.jdbc.error -- HHH000247: ErrorCode: 1062, SQLState: 23000
+15:14:33.848 [pool-1-thread-2] WARN org.hibernate.orm.jdbc.error -- Duplicate entry '1' for key 'Payment.uk_payment_booking'
+RECOVERY_TRIAL payment provider-unavailable 1 recovered
+RECOVERY_TRIAL payment provider-unavailable 2 recovered
+RECOVERY_TRIAL payment provider-unavailable 3 recovered
+RECOVERY_TRIAL payment provider-unavailable 4 recovered
+RECOVERY_TRIAL payment provider-unavailable 5 recovered
+RECOVERY_TRIAL payment provider-unavailable 6 recovered
+RECOVERY_TRIAL payment provider-unavailable 7 recovered
+RECOVERY_TRIAL payment provider-unavailable 8 recovered
+RECOVERY_TRIAL payment provider-unavailable 9 recovered
+RECOVERY_TRIAL payment provider-unavailable 10 recovered
+RECOVERY_TRIAL payment provider-unavailable 11 recovered
+RECOVERY_TRIAL payment provider-unavailable 12 recovered
+RECOVERY_TRIAL payment provider-unavailable 13 recovered
+RECOVERY_TRIAL payment provider-unavailable 14 recovered
+RECOVERY_TRIAL payment provider-unavailable 15 recovered
+RECOVERY_TRIAL payment provider-unavailable 16 recovered
+RECOVERY_TRIAL payment provider-unavailable 17 recovered
+RECOVERY_TRIAL payment provider-unavailable 18 recovered
+RECOVERY_TRIAL payment provider-unavailable 19 recovered
+RECOVERY_TRIAL payment provider-unavailable 20 recovered
+RECOVERY_TRIAL payment checkout-write-failed 1 recovered
+RECOVERY_TRIAL payment checkout-write-failed 2 recovered
+RECOVERY_TRIAL payment checkout-write-failed 3 recovered
+RECOVERY_TRIAL payment checkout-write-failed 4 recovered
+RECOVERY_TRIAL payment checkout-write-failed 5 recovered
+RECOVERY_TRIAL payment checkout-write-failed 6 recovered
+RECOVERY_TRIAL payment checkout-write-failed 7 recovered
+RECOVERY_TRIAL payment checkout-write-failed 8 recovered
+RECOVERY_TRIAL payment checkout-write-failed 9 recovered
+RECOVERY_TRIAL payment checkout-write-failed 10 recovered
+RECOVERY_TRIAL payment checkout-write-failed 11 recovered
+RECOVERY_TRIAL payment checkout-write-failed 12 recovered
+RECOVERY_TRIAL payment checkout-write-failed 13 recovered
+RECOVERY_TRIAL payment checkout-write-failed 14 recovered
+RECOVERY_TRIAL payment checkout-write-failed 15 recovered
+RECOVERY_TRIAL payment checkout-write-failed 16 recovered
+RECOVERY_TRIAL payment checkout-write-failed 17 recovered
+RECOVERY_TRIAL payment checkout-write-failed 18 recovered
+RECOVERY_TRIAL payment checkout-write-failed 19 recovered
+RECOVERY_TRIAL payment checkout-write-failed 20 recovered
+15:14:42.966 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+15:14:42.984 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Finished Spring Data repository scanning in 11 ms. Found 1 JPA repository interface.
+15:14:43.053 [main] INFO org.hibernate.orm.jpa -- HHH008540: Processing PersistenceUnitInfo [name: default]
+15:14:43.073 [main] INFO org.springframework.orm.jpa.persistenceunit.SpringPersistenceUnitInfo -- No LoadTimeWeaver setup: ignoring JPA class transformer
+15:14:43.087 [main] INFO org.hibernate.orm.connections.pooling -- HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://paymentdb:3306/recovery_test_5ec311d149744977a3b12a9a28a156cb]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.0.46
+	Default catalog/schema: recovery_test_5ec311d149744977a3b12a9a28a156cb/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+15:14:43.195 [main] INFO org.hibernate.orm.core -- HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+15:14:43.391 [main] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Initialized JPA EntityManagerFactory for persistence unit 'default'
+
+Test run finished after 22058 ms
+[         5 containers found      ]
+[         0 containers skipped    ]
+[         5 containers started    ]
+[         0 containers aborted    ]
+[         5 containers successful ]
+[         0 containers failed     ]
+[        56 tests found           ]
+[         0 tests skipped         ]
+[        56 tests started         ]
+[         0 tests aborted         ]
+[        56 tests successful      ]
+[         0 tests failed          ]
+
+RECOVERY_RESULT tests=56 passed=56 failed=0 skipped=0
+15:14:43.862 [SpringContextShutdownHook] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Closing JPA EntityManagerFactory for persistence unit 'default'
+15:14:43.864 [SpringContextShutdownHook] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Closing JPA EntityManagerFactory for persistence unit 'default'

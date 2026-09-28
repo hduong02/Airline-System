@@ -1,0 +1,16 @@
+# Opt-in, container-loopback-only diagnostics. Pool sizes are unchanged.
+management:
+  server:
+    port: 9091
+    address: 127.0.0.1
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  metrics:
+    distribution:
+      percentiles:
+        hikaricp.connections.usage: 0.5,0.95,0.99
+        hikaricp.connections.acquire: 0.5,0.95,0.99
+        booking.seat.reservation: 0.5,0.95,0.99
+        booking.phase: 0.5,0.95,0.99

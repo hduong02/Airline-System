@@ -4,6 +4,7 @@ import com.example.enums.PaymentStatus;
 import com.example.payment_service.service.PaymentInitiationService;
 import com.example.payment_service.event.PaymentEventProducer;
 import com.example.payment_service.model.Payment;
+import com.example.payment_service.model.CheckoutVerificationSnapshot;
 import com.example.payment_service.repository.PaymentRepository;
 import com.example.payment_service.service.gateway.StripeService;
 import com.example.payment_service.service.gateway.StripeService.CheckoutOutcome;
@@ -81,8 +82,59 @@ class PaymentExpiryReconciliationTest {
         verifyNoInteractions(events);
     }
 
+    @Test
+    void changedSessionRejectsStaleExpiryResult() throws Exception {
+        Payment payment = pendingPayment();
+        when(repository.findByBookingIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(stripe.reconcileCheckoutSession("cs_1")).thenAnswer(invocation -> {
+            payment.setCheckoutSessionId("cs_new");
+            return new CheckoutState(CheckoutOutcome.EXPIRED, null);
+        });
+
+        var error = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.reconcileExpiredCheckout(1L));
+        assertEquals(409, error.getStatusCode().value());
+        assertEquals(PaymentStatus.PENDING, payment.getStatus());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    void paidCheckoutWithoutIntentRemainsPending() throws Exception {
+        Payment payment = pendingPayment();
+        when(repository.findByBookingIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(stripe.reconcileCheckoutSession("cs_1"))
+                .thenReturn(new CheckoutState(CheckoutOutcome.PAID, null));
+
+        assertThrows(IllegalStateException.class, () -> service.reconcileExpiredCheckout(1L));
+        assertEquals(PaymentStatus.PENDING, payment.getStatus());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    void processingCheckoutRemainsPendingForRetry() throws Exception {
+        Payment payment = pendingPayment();
+        when(repository.findByBookingIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(stripe.reconcileCheckoutSession("cs_1"))
+                .thenReturn(new CheckoutState(CheckoutOutcome.PROCESSING, null));
+
+        assertEquals(PaymentStatus.PENDING, service.reconcileExpiredCheckout(1L).getStatus());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(events);
+    }
+
     private Payment pendingPayment() {
-        return Payment.builder().id(9L).bookingId(1L).userId(2L).amount(100.0)
+        Payment payment = Payment.builder().id(9L).bookingId(1L).userId(2L).amount(100.0)
                 .checkoutSessionId("cs_1").status(PaymentStatus.PENDING).build();
+        stubSnapshot(payment);
+        return payment;
+    }
+
+    private void stubSnapshot(Payment payment) {
+        when(repository.findCheckoutVerificationSnapshot(1L)).thenAnswer(invocation -> Optional.of(
+                new CheckoutVerificationSnapshot(payment.getId(), payment.getUserId(), payment.getStatus(),
+                        payment.getCheckoutSessionId())));
+        when(repository.findById(9L)).thenReturn(Optional.of(payment));
     }
 }

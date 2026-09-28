@@ -3,6 +3,7 @@ package com.example.seat_service.repository;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -47,6 +48,10 @@ public interface SeatInstanceRepository extends JpaRepository<SeatInstance, Long
     Long countAvailableByFlightId(@Param("flightId") Long flightId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT si FROM SeatInstance si JOIN FETCH si.seat s JOIN FETCH si.flightInstanceCabin fc WHERE si.id = :seatInstanceId")
+    // Reservation/confirmation/release need inventory state and the cabin ID only.
+    // A fetch graph overrides eager mappings without changing detail-read behavior.
+    // Keep the lock on the inventory row; capacity updates lock cabins in ID order.
+    @EntityGraph(attributePaths = "id", type = EntityGraph.EntityGraphType.FETCH)
+    @Query("SELECT si FROM SeatInstance si WHERE si.id = :seatInstanceId")
     Optional<SeatInstance> findByIdForUpdate(@Param("seatInstanceId") Long seatInstanceId);
 }

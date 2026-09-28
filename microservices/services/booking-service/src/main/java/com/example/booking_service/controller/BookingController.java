@@ -29,7 +29,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<PaymentInitiateResponse> createBooking(
             @Valid @RequestBody BookingRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader("X-User-Id") Long userId)
             throws Exception
         {

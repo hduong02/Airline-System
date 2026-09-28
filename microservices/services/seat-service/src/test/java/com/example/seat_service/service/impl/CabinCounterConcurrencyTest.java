@@ -116,6 +116,53 @@ class CabinCounterConcurrencyTest {
     }
 
     @Test
+    void lateReservationCannotReacquireSeatsAfterCancellationCommits() throws Exception {
+        seed(1, 2, true, false);
+        var beforeSeatLock = new CountDownLatch(1);
+        var cancellationCommitted = new CountDownLatch(1);
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            try {
+                var late = executor.submit(() -> inTransaction(em -> {
+                    // Match the reservation endpoint's transaction isolation on MySQL as well as H2.
+                    em.unwrap(org.hibernate.Session.class).doWork(connection ->
+                            connection.setTransactionIsolation(java.sql.Connection.TRANSACTION_READ_COMMITTED));
+                    var repositories = new JpaRepositoryFactory(em);
+                    var repository = repositories.getRepository(SeatInstanceRepository.class);
+                    var inventory = (SeatInstanceRepository) java.lang.reflect.Proxy.newProxyInstance(
+                            SeatInstanceRepository.class.getClassLoader(), new Class<?>[]{SeatInstanceRepository.class},
+                            (proxy, method, args) -> {
+                                if (method.getName().equals("findByIdForUpdate")) {
+                                    beforeSeatLock.countDown();
+                                    await(cancellationCommitted);
+                                }
+                                try {
+                                    return method.invoke(repository, args);
+                                } catch (java.lang.reflect.InvocationTargetException failure) {
+                                    throw failure.getCause();
+                                }
+                            });
+                    new SeatInstanceServiceImpl(inventory,
+                            repositories.getRepository(FlightInstanceCabinRepository.class),
+                            repositories.getRepository(CancelledBookingRepository.class))
+                            .reserveBookingSeats(100L, List.of(seatIds[0]));
+                }));
+                if (!beforeSeatLock.await(10, TimeUnit.SECONDS)) {
+                    late.get(1, TimeUnit.SECONDS);
+                    fail("Reservation did not reach the seat lock");
+                }
+                inTransaction(em -> service(em).releaseBookingSeats(100L, List.of(seatIds[0])));
+                cancellationCommitted.countDown();
+                var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                        () -> late.get(5, TimeUnit.SECONDS));
+                assertEquals("Booking has already been cancelled: 100", failure.getCause().getMessage());
+            } finally {
+                cancellationCommitted.countDown();
+            }
+        }
+        assertInventory(0, SeatAvailabilityStatus.AVAILABLE, SeatAvailabilityStatus.AVAILABLE);
+    }
+
+    @Test
     void failedSecondCabinRollsBackTheFirstCabinIncrementAndAllSeats() {
         seed(0, 2, false, false);
         inTransaction(em -> {

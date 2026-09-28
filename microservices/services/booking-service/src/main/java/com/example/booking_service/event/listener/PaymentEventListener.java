@@ -11,6 +11,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.example.booking_service.model.Booking;
 import com.example.booking_service.repository.BookingRepository;
@@ -37,35 +40,40 @@ public class PaymentEventListener {
     private final UserClient userClient;
     private final TicketService ticketService;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final PlatformTransactionManager transactionManager;
 
     @KafkaListener(topics = "payment.completed", groupId = "booking-service-group")
-    @Transactional
+    @Transactional(propagation = Propagation.NEVER)
     public void handlePaymentCompleted(PaymentCompletedEvent event) {
+        // Copy only scalar IDs; no managed entity or connection crosses the HTTP boundary.
+        var read = new TransactionTemplate(transactionManager);
+        read.setReadOnly(true);
+        ConfirmationLookup lookup = read.execute(status -> {
+            Booking booking = bookingRepository.findById(event.getBookingId()).orElse(null);
+            if (booking == null || booking.getStatus() != BookingStatus.PENDING) return null;
+            return new ConfirmationLookup(booking.getFlightInstanceId(), booking.getFareId(), booking.getUserId());
+        });
+        if (lookup == null) return;
 
-        Booking booking = bookingRepository.findByIdForUpdate(event.getBookingId())
-                .orElse(null);
+        FlightInstanceResponse flightInstance = fetchFlightInstance(lookup.flightInstanceId());
+        FareResponse fareResponse = fetchFare(lookup.fareId());
+        UserDto userDto = fetchUser(lookup.userId());
 
-        if (booking == null || booking.getStatus() != BookingStatus.PENDING)
-            return;
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            // Another confirmation, cancellation or expiry may have won during enrichment.
+            Booking booking = bookingRepository.findByIdForUpdate(event.getBookingId()).orElse(null);
+            if (booking == null || booking.getStatus() != BookingStatus.PENDING) return;
 
-        ticketService.generateTicketsForBooking(booking);
-        booking.setTicketIssued(true);
-        booking.setStatus(BookingStatus.CONFIRMED);
-        booking.setPaymentId(event.getPaymentId());
-        booking = bookingRepository.save(booking);
-
-        FlightInstanceResponse flightInstance = fetchFlightInstance(booking.getFlightInstanceId());
-        FareResponse fareResponse = fetchFare(booking.getFareId());
-        UserDto userDto = fetchUser(booking.getUserId());
-
-        bookingEventProducer.sendBookingConfirmed(
-            booking,
-            event,
-            flightInstance,
-            fareResponse,
-            userDto
-        );
+            ticketService.generateTicketsForBooking(booking);
+            booking.setTicketIssued(true);
+            booking.setStatus(BookingStatus.CONFIRMED);
+            booking.setPaymentId(event.getPaymentId());
+            booking = bookingRepository.save(booking);
+            bookingEventProducer.sendBookingConfirmed(booking, event, flightInstance, fareResponse, userDto);
+        });
     }
+
+    private record ConfirmationLookup(Long flightInstanceId, Long fareId, Long userId) {}
 
     @KafkaListener(topics = "payment.failed", groupId = "booking-service-group")
     @Transactional

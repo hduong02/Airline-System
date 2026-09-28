@@ -20,7 +20,7 @@ class BookingCreationControllerTest {
             """;
 
     @Test
-    void forwardsKeyAndAuthenticatedUserAndKeepsLegacyHeaderOptional() throws Exception {
+    void forwardsKeyAndAuthenticatedUserAndPreservesConflictResponse() throws Exception {
         var service = mock(IdempotentBookingService.class);
         var mvc = MockMvcBuilders.standaloneSetup(new BookingController(mock(BookingService.class), service)).build();
         String key = "b4625216-6f2c-424a-bf49-29e0b46269f0";
@@ -30,14 +30,23 @@ class BookingCreationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.paymentId").value(9));
         verify(service).createBooking(any(), eq(7L), eq(key));
-        mvc.perform(post("/api/bookings").header("X-User-Id", "7")
-                        .contentType(MediaType.APPLICATION_JSON).content(BODY))
-                .andExpect(status().isCreated());
-        verify(service).createBooking(any(), eq(7L), isNull());
         when(service.createBooking(any(), eq(7L), eq(key)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Different request"));
         mvc.perform(post("/api/bookings").header("X-User-Id", "7").header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void missingKeyIsRejectedBeforeCallingBookingServices() throws Exception {
+        var service = mock(IdempotentBookingService.class);
+        var bookings = mock(BookingService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new BookingController(bookings, service)).build();
+
+        mvc.perform(post("/api/bookings").header("X-User-Id", "7")
+                        .contentType(MediaType.APPLICATION_JSON).content(BODY))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(service, bookings);
     }
 }

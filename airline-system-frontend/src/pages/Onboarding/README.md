@@ -230,7 +230,6 @@ The wizard handles various scenarios:
 
 ### Potential Improvements
 - [ ] Multi-language support
-- [ ] Dark mode theme
 - [ ] File upload progress bars
 - [ ] Advanced IATA/ICAO validation via API
 - [ ] Real-time city search

@@ -1,0 +1,43 @@
+{
+  "table_storage_bytes": 574914560,
+  "volumes": [
+    {
+      "container": "locationdb",
+      "volume_allocated_bytes": 211329024
+    },
+    {
+      "container": "userdb",
+      "volume_allocated_bytes": 245215232
+    },
+    {
+      "container": "airlinedb",
+      "volume_allocated_bytes": 211054592
+    },
+    {
+      "container": "seatdb",
+      "volume_allocated_bytes": 1105838080
+    },
+    {
+      "container": "flightdb",
+      "volume_allocated_bytes": 225112064
+    },
+    {
+      "container": "pricingdb",
+      "volume_allocated_bytes": 216707072
+    },
+    {
+      "container": "bookingdb",
+      "volume_allocated_bytes": 252715008
+    },
+    {
+      "container": "paymentdb",
+      "volume_allocated_bytes": 219566080
+    },
+    {
+      "container": "ancillarydb",
+      "volume_allocated_bytes": 211230720
+    }
+  ],
+  "volume_total_bytes": 2898767872,
+  "filesystem": "Filesystem        1B-blocks        Used   Available Use% Mounted on\n/dev/sda1      102915489792 14655504384 88243208192  15% /\n"
+}

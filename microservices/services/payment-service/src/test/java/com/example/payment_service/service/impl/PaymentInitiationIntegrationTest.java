@@ -16,6 +16,9 @@ import com.example.payment_service.service.gateway.StripeService;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -164,6 +167,43 @@ class PaymentInitiationIntegrationTest {
         verify(stripe).createPaymentLink(any(), any());
     }
 
+    static java.util.stream.Stream<Arguments> simulatedInterruptions() {
+        return java.util.stream.Stream.of("provider-unavailable", "checkout-write-failed")
+                .flatMap(fault -> java.util.stream.IntStream.rangeClosed(1, 20)
+                        .mapToObj(trial -> Arguments.of(fault, trial)));
+    }
+
+    @ParameterizedTest(name = "{0} trial {1}")
+    @MethodSource("simulatedInterruptions")
+    void simulatedInterruptionRetriesWithoutDuplicatePayment(String fault, int trial) throws Exception {
+        if (fault.equals("provider-unavailable")) {
+            when(stripe.createPaymentLink(any(), any())).thenThrow(new Exception("Injected provider failure"))
+                    .thenReturn(link());
+        } else {
+            doThrow(new DataAccessResourceFailureException("Injected checkout write failure"))
+                    .when(repository).save(any(Payment.class));
+        }
+        assertThrows(Exception.class, () -> service.initiatePayment(request()));
+        var claim = repository.findByBookingId(1L).orElseThrow();
+        assertNull(claim.getCheckoutSessionId());
+        assertEquals(PaymentStatus.PENDING, claim.getStatus());
+        assertEquals(1, repository.count());
+        if (fault.equals("checkout-write-failed")) reset(repository);
+        var recovered = service.initiatePayment(request());
+        var replay = service.initiatePayment(request());
+        assertEquals(claim.getId(), recovered.getPaymentId());
+        assertEquals(claim.getTransactionId(), recovered.getTransactionId());
+        assertEquals(recovered.getPaymentId(), replay.getPaymentId());
+        assertEquals(recovered.getCheckoutUrl(), replay.getCheckoutUrl());
+        assertEquals("cs_1", repository.findById(claim.getId()).orElseThrow().getCheckoutSessionId());
+        assertEquals(1, repository.count());
+        var calls = ArgumentCaptor.forClass(Payment.class);
+        verify(stripe, times(2)).createPaymentLink(any(), calls.capture());
+        assertTrue(calls.getAllValues().stream().allMatch(p -> claim.getId().equals(p.getId())
+                && claim.getTransactionId().equals(p.getTransactionId())));
+        System.out.printf("RECOVERY_TRIAL payment %s %d recovered%n", fault, trial);
+    }
+
     private PaymentInitiateRequest request() {
         return PaymentInitiateRequest.builder().bookingId(1L).userId(2L).amount(100.0)
                 .gateway(PaymentGateway.STRIPE).description("Booking payment").build();
@@ -178,6 +218,14 @@ class PaymentInitiationIntegrationTest {
     @EnableJpaRepositories(basePackageClasses = PaymentRepository.class)
     static class Config {
         @Bean DataSource dataSource() {
+            String url = System.getenv("RECOVERY_TEST_JDBC_URL");
+            if (url != null) {
+                if (!url.matches("jdbc:mysql://[a-zA-Z0-9_.-]+:3306/recovery_test_[0-9a-f]{32}")) {
+                    throw new IllegalArgumentException("Recovery tests require a disposable recovery_test_UUID schema");
+                }
+                return new DriverManagerDataSource(url, System.getenv("RECOVERY_TEST_JDBC_USER"),
+                        System.getenv("RECOVERY_TEST_JDBC_PASSWORD"));
+            }
             return new DriverManagerDataSource("jdbc:h2:mem:payment-initiation;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         }
 

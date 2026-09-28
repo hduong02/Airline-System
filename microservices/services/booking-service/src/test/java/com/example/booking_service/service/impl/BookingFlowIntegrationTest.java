@@ -7,6 +7,7 @@ import com.example.booking_service.model.Booking;
 import com.example.booking_service.repository.*;
 import com.example.booking_service.service.BookingService;
 import com.example.booking_service.service.IdempotentBookingService;
+import com.example.booking_service.service.BookingReservationService;
 import com.example.booking_service.service.integration.FareIntegrationService;
 import com.example.embeddable.ContactInfo;
 import com.example.enums.*;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.mockito.ArgumentCaptor;
@@ -82,6 +84,8 @@ class BookingFlowIntegrationTest {
         bookingRepository.deleteAll();
         passengerRepository.deleteAll();
 
+        when(flights.getBookingValidation(20L)).thenReturn(
+                new BookingFlightValidationResponse(10L, 20L, 50L));
         when(flights.getFlightById(10L)).thenReturn(FlightResponse.builder().id(10L).flightNumber("VN123")
                 .departureAirport(AirportResponse.builder().name("Noi Bai").detailedName("Noi Bai (HAN)")
                         .city(CityResponse.builder().name("Hanoi").build()).build())
@@ -110,6 +114,58 @@ class BookingFlowIntegrationTest {
         when(payments.initiatePayment(any(), eq(1L))).thenReturn(PaymentInitiateResponse.builder()
                 .paymentId(9L).gateway(PaymentGateway.STRIPE).amount(155.0).success(true)
                 .checkoutUrl("https://checkout.stripe.com/test").stripeCheckoutUrl("cs_test_fixture").build());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void remotePricingCompletesOutsidePersistenceTransaction(boolean idempotent) throws Exception {
+        when(ancillaries.calculateAncillariesPrice(List.of(60L))).thenAnswer(invocation -> {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            assertEquals(0, bookingRepository.count());
+            assertEquals(0, passengerRepository.count());
+            return 15.0;
+        });
+        when(ancillaries.calculateMealPrice(List.of(70L))).thenAnswer(invocation -> {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            assertEquals(0, bookingRepository.count());
+            assertEquals(0, passengerRepository.count());
+            return 5.0;
+        });
+        doAnswer(invocation -> {
+            assertEquals(!idempotent, TransactionSynchronizationManager.isActualTransactionActive());
+            return null;
+        }).when(seats).reserveBookingSeats(anyLong(), anyList());
+
+        if (idempotent) {
+            idempotentBookings.createBooking(request(), 1L, UUID.randomUUID().toString());
+        } else {
+            bookings.createBooking(request(), 1L);
+        }
+
+        assertEquals(1, bookingRepository.count());
+        var initiation = ArgumentCaptor.forClass(PaymentInitiateRequest.class);
+        verify(payments).initiatePayment(initiation.capture(), eq(1L));
+        assertEquals(155.0, initiation.getValue().getAmount());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void pricingFailurePreventsPersistenceAndPreservesOriginalException(boolean mealFailure) {
+        var failure = new ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "Pricing unavailable");
+        if (mealFailure) {
+            when(ancillaries.calculateMealPrice(List.of(70L))).thenThrow(failure);
+        } else {
+            when(ancillaries.calculateAncillariesPrice(List.of(60L))).thenThrow(failure);
+        }
+
+        assertSame(failure, assertThrows(ResponseStatusException.class,
+                () -> bookings.createBooking(request(), 1L)));
+
+        assertEquals(0, bookingRepository.count());
+        assertEquals(0, passengerRepository.count());
+        verify(seats, never()).reserveBookingSeats(anyLong(), anyList());
+        verifyNoInteractions(payments);
     }
 
     @ParameterizedTest
@@ -341,18 +397,13 @@ class BookingFlowIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"legacy", "prepare", "idempotent"})
-    void validatesBeforeTransactionAndReservesInsideTransaction(String path) throws Exception {
-        var flight = flights.getFlightById(10L);
-        var instance = flights.getFlightInstanceById(20L);
+    void validatesBeforeTransactionAndReservesOutsideTransactionForIdempotentCheckout(String path) throws Exception {
+        var flight = flights.getBookingValidation(20L);
         var fare = pricing.getFareById(30L);
         var selection = seats.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L));
-        when(flights.getFlightById(10L)).thenAnswer(invocation -> {
+        when(flights.getBookingValidation(20L)).thenAnswer(invocation -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             return flight;
-        });
-        when(flights.getFlightInstanceById(20L)).thenAnswer(invocation -> {
-            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
-            return instance;
         });
         when(pricing.getFareById(30L)).thenAnswer(invocation -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
@@ -364,8 +415,7 @@ class BookingFlowIntegrationTest {
                     return selection;
                 });
         doAnswer(invocation -> {
-            assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
-            assertTrue(TransactionSynchronizationManager.isSynchronizationActive());
+            assertEquals(!path.equals("idempotent"), TransactionSynchronizationManager.isActualTransactionActive());
             assertEquals(1, bookingRepository.count());
             assertEquals(1, passengerRepository.count());
             return null;
@@ -383,7 +433,7 @@ class BookingFlowIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void seatTakenAfterValidationRollsBackBookingAndAttempt(boolean idempotent) {
+    void seatConflictRetainsCancelledAttemptForIdempotentRecoveryAndRollsBackLegacy(boolean idempotent) {
         var conflict = feign.FeignException.errorStatus("reserveBookingSeats",
                 feign.Response.builder().status(409).reason("Seat taken")
                         .request(feign.Request.create(feign.Request.HttpMethod.POST, "/reserve",
@@ -397,10 +447,27 @@ class BookingFlowIntegrationTest {
             }
         });
         assertEquals(409, failure.getStatusCode().value());
-        assertEquals(0, bookingRepository.count());
-        assertEquals(0, passengerRepository.count());
-        assertEquals(0, attempts.count());
+        assertEquals(idempotent ? 1 : 0, bookingRepository.count());
+        assertEquals(idempotent ? 1 : 0, passengerRepository.count());
+        assertEquals(idempotent ? 1 : 0, attempts.count());
+        if (idempotent) {
+            assertEquals(BookingStatus.CANCELLED, bookingRepository.findAll().getFirst().getStatus());
+            assertEquals(com.example.booking_service.model.BookingAttempt.ReservationState.RELEASE_PENDING,
+                    attempts.findAll().getFirst().getReservationState());
+        }
         verifyNoInteractions(payments);
+    }
+
+    @Test
+    void newCreationUsesSixTransactions() throws Exception {
+        var statistics = entityManagerFactory.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        long before = statistics.getTransactionCount();
+
+        var response = idempotentBookings.createBooking(request(), 1L, UUID.randomUUID().toString());
+
+        assertEquals(9L, response.getPaymentId());
+        assertEquals(6L, statistics.getTransactionCount() - before,
+                "Preparation must return the replay decision without a separate transaction");
     }
 
     @Test
@@ -409,7 +476,11 @@ class BookingFlowIntegrationTest {
         var original = idempotentBookings.createBooking(request(), 1L, key);
         // Simulate lost response/retry after availability has changed.
         clearInvocations(flights, seats, payments, pricing, ancillaries);
+        var statistics = entityManagerFactory.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        long before = statistics.getTransactionCount();
         var replay = idempotentBookings.createBooking(request(), 1L, key.toUpperCase());
+        assertEquals(2L, statistics.getTransactionCount() - before,
+                "A completed replay only needs the preflight and preparation transactions");
         assertEquals(original, replay);
         assertEquals(1, bookingRepository.count());
         assertEquals(1, passengerRepository.count());
@@ -465,6 +536,18 @@ class BookingFlowIntegrationTest {
         verify(payments, times(1)).initiatePayment(any(), eq(1L));
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "not-a-uuid"})
+    void missingOrInvalidKeyIsRejectedWithoutPersistenceOrRemoteCalls(String key) {
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+                () -> idempotentBookings.createBooking(request(), 1L, key)).getStatusCode().value());
+        assertEquals(0, bookingRepository.count());
+        assertEquals(0, passengerRepository.count());
+        assertEquals(0, attempts.count());
+        verifyNoInteractions(seats, flights, pricing, ancillaries, payments);
+    }
+
     @Test
     void paymentTimeoutRetainsBookingAndRetryUsesSamePaymentRequest() throws Exception {
         String key = UUID.randomUUID().toString();
@@ -492,12 +575,59 @@ class BookingFlowIntegrationTest {
         try (var workers = Executors.newFixedThreadPool(2)) {
             java.util.concurrent.Callable<PaymentInitiateResponse> submit = () -> {
                 assertTrue(start.await(5, TimeUnit.SECONDS));
-                return idempotentBookings.createBooking(request(), 1L, key);
+                try {
+                    return idempotentBookings.createBooking(request(), 1L, key);
+                } catch (ResponseStatusException busy) {
+                    assertEquals(409, busy.getStatusCode().value());
+                    assertTrue(busy.getReason().contains("in progress"));
+                    return null;
+                }
             };
             var first = workers.submit(submit);
             var second = workers.submit(submit);
             start.countDown();
-            assertEquals(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS));
+            var firstResult = first.get(15, TimeUnit.SECONDS);
+            var secondResult = second.get(15, TimeUnit.SECONDS);
+            assertTrue(firstResult != null || secondResult != null);
+            var replay = idempotentBookings.createBooking(request(), 1L, key);
+            if (firstResult != null) assertEquals(firstResult, replay);
+            if (secondResult != null) assertEquals(secondResult, replay);
+        }
+        assertEquals(1, bookingRepository.count());
+        assertEquals(1, passengerRepository.count());
+        assertEquals(1, attempts.count());
+        verify(seats, times(1)).reserveBookingSeats(anyLong(), eq(List.of(100L)));
+        verify(payments, times(1)).initiatePayment(any(), eq(1L));
+    }
+
+    @Test
+    void simultaneousDifferentPayloadsRejectTheLoserBeforeRepeatingSideEffects() throws Exception {
+        String key = UUID.randomUUID().toString();
+        var selection = seats.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L));
+        var validating = new java.util.concurrent.CyclicBarrier(2);
+        when(seats.getBookingSeatSelection(20L, CabinClassType.ECONOMY, List.of(100L)))
+                .thenAnswer(invocation -> {
+                    validating.await(10, TimeUnit.SECONDS);
+                    return selection;
+                });
+        var changed = request();
+        changed.getPassengers().getFirst().setLastName("Changed");
+        java.util.function.Function<BookingRequest, java.util.concurrent.Callable<PaymentInitiateResponse>> submit =
+                payload -> () -> {
+                    try {
+                        return idempotentBookings.createBooking(payload, 1L, key);
+                    } catch (ResponseStatusException conflict) {
+                        assertEquals(409, conflict.getStatusCode().value());
+                        assertTrue(conflict.getReason().contains("different booking request"));
+                        return null;
+                    }
+                };
+        try (var workers = Executors.newFixedThreadPool(2)) {
+            var first = workers.submit(submit.apply(request()));
+            var second = workers.submit(submit.apply(changed));
+            var firstResult = first.get(15, TimeUnit.SECONDS);
+            var secondResult = second.get(15, TimeUnit.SECONDS);
+            assertTrue((firstResult == null) != (secondResult == null), "Exactly one payload must win");
         }
         assertEquals(1, bookingRepository.count());
         assertEquals(1, passengerRepository.count());
@@ -584,9 +714,18 @@ class BookingFlowIntegrationTest {
     @EnableTransactionManagement
     @EnableJpaRepositories(basePackageClasses = BookingRepository.class)
     @Import({BookingServiceImpl.class, PassengerServiceImpl.class, TicketServiceImpl.class,
-            FareIntegrationService.class, PaymentEventListener.class, IdempotentBookingService.class})
+            FareIntegrationService.class, PaymentEventListener.class, IdempotentBookingService.class,
+            BookingReservationService.class})
     static class Config {
         @Bean DataSource dataSource() {
+            String url = System.getenv("RECOVERY_TEST_JDBC_URL");
+            if (url != null) {
+                if (!url.matches("jdbc:mysql://[a-zA-Z0-9_.-]+:3306/recovery_test_[0-9a-f]{32}")) {
+                    throw new IllegalArgumentException("Recovery tests require a disposable recovery_test_UUID schema");
+                }
+                return new DriverManagerDataSource(url, System.getenv("RECOVERY_TEST_JDBC_USER"),
+                        System.getenv("RECOVERY_TEST_JDBC_PASSWORD"));
+            }
             return new DriverManagerDataSource("jdbc:h2:mem:booking-flow;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         }
 

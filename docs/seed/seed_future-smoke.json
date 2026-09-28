@@ -1,0 +1,106 @@
+[
+  {
+    "login": "ROLE_USER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_AIRLINE_OWNER",
+    "passed": true
+  },
+  {
+    "login": "ROLE_SYSTEM_ADMIN",
+    "passed": true
+  },
+  {
+    "scenario": "domestic",
+    "cabin": "ECONOMY",
+    "instance": 1,
+    "passed": true
+  },
+  {
+    "scenario": "domestic",
+    "cabin": "BUSINESS",
+    "instance": 1,
+    "passed": true
+  },
+  {
+    "scenario": "international",
+    "cabin": "ECONOMY",
+    "instance": 79,
+    "passed": true
+  },
+  {
+    "scenario": "international",
+    "cabin": "BUSINESS",
+    "instance": 79,
+    "passed": true
+  },
+  {
+    "scenario": "long_haul",
+    "cabin": "ECONOMY",
+    "instance": 20593,
+    "passed": true
+  },
+  {
+    "scenario": "long_haul",
+    "cabin": "BUSINESS",
+    "instance": 20593,
+    "passed": true
+  },
+  {
+    "scenario": "last_day",
+    "cabin": "ECONOMY",
+    "instance": 78,
+    "passed": true
+  },
+  {
+    "scenario": "last_day",
+    "cabin": "BUSINESS",
+    "instance": 78,
+    "passed": true
+  },
+  {
+    "scenario": "rollover",
+    "cabin": "ECONOMY",
+    "instance": 624,
+    "passed": true
+  },
+  {
+    "scenario": "rollover",
+    "cabin": "BUSINESS",
+    "instance": 624,
+    "passed": true
+  }
+]

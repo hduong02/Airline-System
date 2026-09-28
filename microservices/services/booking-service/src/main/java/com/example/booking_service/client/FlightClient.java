@@ -9,10 +9,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import com.example.payload.request.FlightDepartureFilterRequest;
 import com.example.payload.response.FlightInstanceResponse;
 import com.example.payload.response.FlightResponse;
+import com.example.payload.response.BookingFlightValidationResponse;
 import java.util.List;
 
 @FeignClient(name = "flight-service")
 public interface FlightClient {
+    @GetMapping("/internal/flight-instances/{id}/booking-validation")
+    BookingFlightValidationResponse getBookingValidation(@PathVariable Long id);
+
     @PostMapping("/internal/flight-instances/departure-filter")
     List<Long> filterDepartures(@RequestBody FlightDepartureFilterRequest request);
 

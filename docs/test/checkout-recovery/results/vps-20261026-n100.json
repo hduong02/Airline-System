@@ -1,0 +1,813 @@
+{
+  "started_utc": "2026-10-26T15:13:24.560915+00:00",
+  "host": "srv2036842",
+  "package_sha256": "c00e2fcea2ce5da1b1dee5a6c048b7c40c729e2eaab6bfb5a39b02ee3efa9ee4",
+  "planned_failures": 100,
+  "before": {
+    "payment-service": {
+      "id": "71e007294e56475108f5e54b28409b69ed34b718a8c3d45481adc72ff6892675",
+      "restarts": 0,
+      "started": "2026-10-25T19:18:04.831019482Z"
+    },
+    "airline-system-stripe-simulator-20261025t131250z-1": {
+      "id": "51c2f425a4ba33b559424510f87f2e84c7712bba3f17327778530e09d00a01f1",
+      "restarts": 0,
+      "started": "2026-10-25T13:13:29.234573705Z"
+    },
+    "booking-service": {
+      "id": "d43b0580ab4f52583d51e20591c43d8c3ea81f9c69b0cae7002d21a53052bfca",
+      "restarts": 0,
+      "started": "2026-10-25T13:00:44.029893611Z"
+    },
+    "seat-service": {
+      "id": "45821bfd9fb10eabce1c2eceb8ce28c8011f7326b8e7f45449e6c3c1f293295b",
+      "restarts": 0,
+      "started": "2026-10-22T18:54:27.31914248Z"
+    },
+    "bookingdb": {
+      "id": "d4b91e984bc56555319843e9f0c21595cb32155baabb4caa8171803737815732",
+      "restarts": 0,
+      "started": "2026-10-22T14:53:30.054913812Z"
+    },
+    "mailhog": {
+      "id": "ecbebc2cf9b46c92ca41003bff8d2333cb2ae6db7c93c40fc7aa307d20155ef3",
+      "restarts": 0,
+      "started": "2026-10-23T15:10:42.519140389Z"
+    },
+    "flight-service": {
+      "id": "8cc5b13c699e34f4de1d95979daf8fee880b79bb70a7a38f707364340a6c7932",
+      "restarts": 0,
+      "started": "2026-10-21T16:22:53.608310824Z"
+    },
+    "api-gateway": {
+      "id": "ad2d5765d6c47205874e0ffdbd6ea59cf95fb7cfe7566810e4fd30db686c0ad5",
+      "restarts": 0,
+      "started": "2026-10-21T15:21:49.051813269Z"
+    },
+    "notification-service": {
+      "id": "a18bed472035fde6264ff9e997f061e0e2a4201f281e3e973babbfca769f9b04",
+      "restarts": 0,
+      "started": "2026-10-21T15:21:47.671761735Z"
+    },
+    "ancillary-service": {
+      "id": "0659850be064d977c42cfee067bf3ea3fc0613c21ea1bc61007d2016a635aab4",
+      "restarts": 0,
+      "started": "2026-10-19T22:07:31.727512991Z"
+    },
+    "pricing-service": {
+      "id": "5482ba0ccbaa1022c1eb5b5a7e1a8d50432820a6525a76eea3a32be59e96fe46",
+      "restarts": 0,
+      "started": "2026-10-19T22:06:39.738333885Z"
+    },
+    "location-service": {
+      "id": "cb473fbeb7cd049780e5997a0967d59af1021a9e170484d0e8886e992d13c624",
+      "restarts": 0,
+      "started": "2026-10-19T22:05:40.684672941Z"
+    },
+    "user-service": {
+      "id": "d902c9f4e441f4733cc5fa0aae82c33b8c9bb116bf8a665fd752cf12817887f0",
+      "restarts": 0,
+      "started": "2026-10-19T22:04:50.475627299Z"
+    },
+    "airline-service": {
+      "id": "13093326806f05791075e24e16c1cbf3f569ab5be709496144f288dd4fbd05e4",
+      "restarts": 0,
+      "started": "2026-10-19T22:04:50.475715492Z"
+    },
+    "eureka-server": {
+      "id": "d96d09afafb15df3e65cdaf8bc6e40a498d5301d4485d21906d8d8218dbe3c3f",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:36.947438716Z"
+    },
+    "config-server": {
+      "id": "35c75639338853ab93c3f6b1c6821abb4ce04a1358e65e99a1ad1e0fdce3b29a",
+      "restarts": 0,
+      "started": "2026-10-17T02:57:01.382411439Z"
+    },
+    "paymentdb": {
+      "id": "36ebb98554f23a036b7936d51208b804b426303df50d18f446c57b21f33d8322",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:34.961443737Z"
+    },
+    "ancillarydb": {
+      "id": "02812250b1486a77ed061acf4d8cda1a63155ac1dd41eb6ff2599d61e36fee10",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:34.05108098Z"
+    },
+    "pricingdb": {
+      "id": "e5c7bdc0921701a4d88ff52a2517df76268ce3df737282c1eba9ddcb5e19c455",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.683971628Z"
+    },
+    "seatdb": {
+      "id": "9d31779d3423d1b42eea125a7d552c296f127c839a4bb9133624adf806d6f9d2",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.380396409Z"
+    },
+    "locationdb": {
+      "id": "e69487fc78e35b839459436d88a53ba7d560198e3fddc220c644cc8a8439098d",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.01937302Z"
+    },
+    "flightdb": {
+      "id": "8c3005201c76915d52125fa699f5252a3eedfba7e2db59121fda58eb7f82b003",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.709111923Z"
+    },
+    "airlinedb": {
+      "id": "5960d94a2c4b522ef0d75abb6df278b9ba7d205d5f41d848e9c8ae3f4c0dbd92",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.44845765Z"
+    },
+    "userdb": {
+      "id": "b4aab62ecc7f7d04d771c6ad21f0d95644eb80ce90060264435a08f3c52e4512",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.041444695Z"
+    },
+    "kafka": {
+      "id": "0b8253c96b1819cc00509b1a75ac972672926bc338a2d89c1dd8be8f41c0b7e2",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:35.762833089Z"
+    },
+    "redis": {
+      "id": "b3d86c1bd3e049a6b8e67fb66974bf84fe2b4e300be0751fb77f19eb0d3c71dc",
+      "restarts": 0,
+      "started": "2026-10-17T02:57:01.439836286Z"
+    }
+  },
+  "services": {
+    "booking": {
+      "image_id": "sha256:b9f1ff1509999490cff7ecf457db02e867f9557cfb6a4da284efee7cc63965e7",
+      "image_tag": "booking-service:replay-check-20261025",
+      "mysql_version": "8.0.46",
+      "schema": "recovery_test_f93d7aeaee1f4dbda413c712708aead1",
+      "exit_code": 0,
+      "trials": [
+        [
+          "booking",
+          "seat-response-lost",
+          "1"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "2"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "3"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "4"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "5"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "6"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "7"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "8"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "9"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "10"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "11"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "12"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "13"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "14"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "15"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "16"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "17"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "18"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "19"
+        ],
+        [
+          "booking",
+          "seat-response-lost",
+          "20"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "1"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "2"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "3"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "4"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "5"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "6"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "7"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "8"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "9"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "10"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "11"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "12"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "13"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "14"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "15"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "16"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "17"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "18"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "19"
+        ],
+        [
+          "booking",
+          "reservation-worker-crashed",
+          "20"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "1"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "2"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "3"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "4"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "5"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "6"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "7"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "8"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "9"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "10"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "11"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "12"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "13"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "14"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "15"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "16"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "17"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "18"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "19"
+        ],
+        [
+          "booking",
+          "payment-response-lost",
+          "20"
+        ]
+      ],
+      "junit_summary": [
+        "RECOVERY_RESULT tests=118 passed=118 failed=0 skipped=0"
+      ],
+      "schema_removed": true,
+      "test_user_removed": true
+    },
+    "payment": {
+      "image_id": "sha256:4a5daa6deb4d80cfdd46ddc143185e06a4d64ac03d3f9bb87870f635321b860b",
+      "image_tag": "sha256:4a5daa6deb4d80cfdd46ddc143185e06a4d64ac03d3f9bb87870f635321b860b",
+      "mysql_version": "8.0.46",
+      "schema": "recovery_test_5ec311d149744977a3b12a9a28a156cb",
+      "exit_code": 0,
+      "trials": [
+        [
+          "payment",
+          "provider-unavailable",
+          "1"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "2"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "3"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "4"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "5"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "6"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "7"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "8"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "9"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "10"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "11"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "12"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "13"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "14"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "15"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "16"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "17"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "18"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "19"
+        ],
+        [
+          "payment",
+          "provider-unavailable",
+          "20"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "1"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "2"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "3"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "4"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "5"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "6"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "7"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "8"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "9"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "10"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "11"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "12"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "13"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "14"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "15"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "16"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "17"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "18"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "19"
+        ],
+        [
+          "payment",
+          "checkout-write-failed",
+          "20"
+        ]
+      ],
+      "junit_summary": [
+        "RECOVERY_RESULT tests=56 passed=56 failed=0 skipped=0"
+      ],
+      "schema_removed": true,
+      "test_user_removed": true
+    }
+  },
+  "after": {
+    "payment-service": {
+      "id": "71e007294e56475108f5e54b28409b69ed34b718a8c3d45481adc72ff6892675",
+      "restarts": 0,
+      "started": "2026-10-25T19:18:04.831019482Z"
+    },
+    "airline-system-stripe-simulator-20261025t131250z-1": {
+      "id": "51c2f425a4ba33b559424510f87f2e84c7712bba3f17327778530e09d00a01f1",
+      "restarts": 0,
+      "started": "2026-10-25T13:13:29.234573705Z"
+    },
+    "booking-service": {
+      "id": "d43b0580ab4f52583d51e20591c43d8c3ea81f9c69b0cae7002d21a53052bfca",
+      "restarts": 0,
+      "started": "2026-10-25T13:00:44.029893611Z"
+    },
+    "seat-service": {
+      "id": "45821bfd9fb10eabce1c2eceb8ce28c8011f7326b8e7f45449e6c3c1f293295b",
+      "restarts": 0,
+      "started": "2026-10-22T18:54:27.31914248Z"
+    },
+    "bookingdb": {
+      "id": "d4b91e984bc56555319843e9f0c21595cb32155baabb4caa8171803737815732",
+      "restarts": 0,
+      "started": "2026-10-22T14:53:30.054913812Z"
+    },
+    "mailhog": {
+      "id": "ecbebc2cf9b46c92ca41003bff8d2333cb2ae6db7c93c40fc7aa307d20155ef3",
+      "restarts": 0,
+      "started": "2026-10-23T15:10:42.519140389Z"
+    },
+    "flight-service": {
+      "id": "8cc5b13c699e34f4de1d95979daf8fee880b79bb70a7a38f707364340a6c7932",
+      "restarts": 0,
+      "started": "2026-10-21T16:22:53.608310824Z"
+    },
+    "api-gateway": {
+      "id": "ad2d5765d6c47205874e0ffdbd6ea59cf95fb7cfe7566810e4fd30db686c0ad5",
+      "restarts": 0,
+      "started": "2026-10-21T15:21:49.051813269Z"
+    },
+    "notification-service": {
+      "id": "a18bed472035fde6264ff9e997f061e0e2a4201f281e3e973babbfca769f9b04",
+      "restarts": 0,
+      "started": "2026-10-21T15:21:47.671761735Z"
+    },
+    "ancillary-service": {
+      "id": "0659850be064d977c42cfee067bf3ea3fc0613c21ea1bc61007d2016a635aab4",
+      "restarts": 0,
+      "started": "2026-10-19T22:07:31.727512991Z"
+    },
+    "pricing-service": {
+      "id": "5482ba0ccbaa1022c1eb5b5a7e1a8d50432820a6525a76eea3a32be59e96fe46",
+      "restarts": 0,
+      "started": "2026-10-19T22:06:39.738333885Z"
+    },
+    "location-service": {
+      "id": "cb473fbeb7cd049780e5997a0967d59af1021a9e170484d0e8886e992d13c624",
+      "restarts": 0,
+      "started": "2026-10-19T22:05:40.684672941Z"
+    },
+    "user-service": {
+      "id": "d902c9f4e441f4733cc5fa0aae82c33b8c9bb116bf8a665fd752cf12817887f0",
+      "restarts": 0,
+      "started": "2026-10-19T22:04:50.475627299Z"
+    },
+    "airline-service": {
+      "id": "13093326806f05791075e24e16c1cbf3f569ab5be709496144f288dd4fbd05e4",
+      "restarts": 0,
+      "started": "2026-10-19T22:04:50.475715492Z"
+    },
+    "eureka-server": {
+      "id": "d96d09afafb15df3e65cdaf8bc6e40a498d5301d4485d21906d8d8218dbe3c3f",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:36.947438716Z"
+    },
+    "config-server": {
+      "id": "35c75639338853ab93c3f6b1c6821abb4ce04a1358e65e99a1ad1e0fdce3b29a",
+      "restarts": 0,
+      "started": "2026-10-17T02:57:01.382411439Z"
+    },
+    "paymentdb": {
+      "id": "36ebb98554f23a036b7936d51208b804b426303df50d18f446c57b21f33d8322",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:34.961443737Z"
+    },
+    "ancillarydb": {
+      "id": "02812250b1486a77ed061acf4d8cda1a63155ac1dd41eb6ff2599d61e36fee10",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:34.05108098Z"
+    },
+    "pricingdb": {
+      "id": "e5c7bdc0921701a4d88ff52a2517df76268ce3df737282c1eba9ddcb5e19c455",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.683971628Z"
+    },
+    "seatdb": {
+      "id": "9d31779d3423d1b42eea125a7d552c296f127c839a4bb9133624adf806d6f9d2",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.380396409Z"
+    },
+    "locationdb": {
+      "id": "e69487fc78e35b839459436d88a53ba7d560198e3fddc220c644cc8a8439098d",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:33.01937302Z"
+    },
+    "flightdb": {
+      "id": "8c3005201c76915d52125fa699f5252a3eedfba7e2db59121fda58eb7f82b003",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.709111923Z"
+    },
+    "airlinedb": {
+      "id": "5960d94a2c4b522ef0d75abb6df278b9ba7d205d5f41d848e9c8ae3f4c0dbd92",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.44845765Z"
+    },
+    "userdb": {
+      "id": "b4aab62ecc7f7d04d771c6ad21f0d95644eb80ce90060264435a08f3c52e4512",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:32.041444695Z"
+    },
+    "kafka": {
+      "id": "0b8253c96b1819cc00509b1a75ac972672926bc338a2d89c1dd8be8f41c0b7e2",
+      "restarts": 0,
+      "started": "2026-10-19T10:57:35.762833089Z"
+    },
+    "redis": {
+      "id": "b3d86c1bd3e049a6b8e67fb66974bf84fe2b4e300be0751fb77f19eb0d3c71dc",
+      "restarts": 0,
+      "started": "2026-10-17T02:57:01.439836286Z"
+    }
+  },
+  "service_containers_unchanged": true,
+  "finished_utc": "2026-10-26T15:14:45.301290+00:00",
+  "recovered_failures": 100,
+  "recovery_percent": 100.0,
+  "trials_match_plan": true,
+  "scenario_counts": {
+    "seat-response-lost": 20,
+    "reservation-worker-crashed": 20,
+    "payment-response-lost": 20,
+    "provider-unavailable": 20,
+    "checkout-write-failed": 20
+  },
+  "passed": true
+}

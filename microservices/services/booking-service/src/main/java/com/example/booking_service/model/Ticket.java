@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 import com.example.enums.TicketStatus;
 
 @Entity
-@Table(name = "tickets")
+@Table(name = "tickets", uniqueConstraints = @UniqueConstraint(
+        name = "uk_tickets_ticket_number", columnNames = "ticket_number"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +21,7 @@ public class Ticket {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "ticket_number", nullable = false)
     private String ticketNumber;
 
     @Enumerated(EnumType.STRING)
