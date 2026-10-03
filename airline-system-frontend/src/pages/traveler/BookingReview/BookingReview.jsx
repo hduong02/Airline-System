@@ -59,7 +59,7 @@ const BookingReview = () => {
   );
 
   // State management
-  const [travellerData, setTravellerData] = useState({ passengers: [], contactInfo: { email: "", phone: "", countryCode: "+91" } });
+  const [travellerData, setTravellerData] = useState({ passengers: [], contactInfo: { email: "", phone: "", countryCode: "+84" } });
   const [selectedSeats, setSelectedSeats] = useState([]); // Changed to array for multiple passengers
   const [selectedMeals, setSelectedMeals] = useState([]);
   const [selectedBaggage, setSelectedBaggage] = useState([]);
@@ -233,7 +233,7 @@ const BookingReview = () => {
         firstName: t.firstName.trim(),
         lastName: t.lastName.trim(),
         email: t.email || "",
-        phone: t.phone ? `${t.countryCode || "+91"}${t.phone}` : "",
+        phone: t.phone ? `${t.countryCode || "+84"}${t.phone}` : "",
         dateOfBirth: t.dob || null,
         gender: t.gender ? t.gender.trim().toUpperCase() : null,
         seatNumber: selectedSeats[index]

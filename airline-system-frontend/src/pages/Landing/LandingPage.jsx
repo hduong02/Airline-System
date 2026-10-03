@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { 
   Plane, 
   Users, 
@@ -104,14 +104,14 @@ const LandingPage = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+            <Link to="/" aria-label="AirlinePro home" className="flex items-center space-x-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600">
               <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                 <Plane className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 AirlinePro
               </span>
-            </div>
+            </Link>
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-muted-foreground hover:text-primary transition-colors hover:scale-105 transform">Features</a>
               <a href="#about" className="text-muted-foreground hover:text-primary transition-colors hover:scale-105 transform">About</a>
@@ -836,14 +836,14 @@ const LandingPage = () => {
           
           <div className="border-t border-border pt-8">
             <div className="flex flex-col lg:flex-row justify-between items-center">
-              <div className="flex items-center space-x-2 mb-4 lg:mb-0">
+              <Link to="/" aria-label="AirlinePro home" className="flex items-center space-x-2 mb-4 lg:mb-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600">
                 <div className="p-2 bg-gradient-to-r from-primary to-primary rounded-lg">
                   <Plane className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">
                   AirlinePro
                 </span>
-              </div>
+              </Link>
               <div className="text-sm text-center lg:text-right">
                 <p>&copy; 2024 AirlinePro. All rights reserved.</p>
                 <p className="text-muted-foreground mt-1">Making travel accessible for everyone.</p>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,7 +46,7 @@ const Auth = ({isLogin}) => {
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-12 xl:px-20">
           <div className="max-w-md">
             {/* Logo and brand */}
-            <div className="flex items-center mb-8">
+            <Link to="/" aria-label="AirlinePro home" className="flex w-fit items-center mb-8 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
               <div className="bg-gradient-to-r from-blue-400 to-purple-400 p-3 rounded-2xl shadow-lg">
                 <Plane className="h-8 w-8 text-white" />
               </div>
@@ -53,7 +54,7 @@ const Auth = ({isLogin}) => {
                 <h1 className="text-2xl font-bold text-white">AirlinePro</h1>
                 <p className="text-blue-200 text-sm">Premium Flight Management</p>
               </div>
-            </div>
+            </Link>
 
             {/* Main heading */}
             <div className="mb-8">
@@ -109,14 +110,14 @@ const Auth = ({isLogin}) => {
             <Card className="bg-white border-0 shadow-2xl overflow-hidden">
               <CardContent className="p-8">
                 {/* Mobile logo */}
-                <div className="lg:hidden flex items-center justify-center mb-8">
+                <Link to="/" aria-label="AirlinePro home" className="lg:hidden flex items-center justify-center mb-8 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600">
                   <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-2xl">
                     <Plane className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-3">
                     <h1 className="text-xl font-bold text-gray-900">AirlinePro</h1>
                   </div>
-                </div>
+                </Link>
 
                 {/* Form header */}
                 <div className="text-center mb-8">

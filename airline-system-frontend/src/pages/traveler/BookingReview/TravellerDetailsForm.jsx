@@ -41,7 +41,7 @@ const TravellerDetailsForm = ({ passengerCount = 1, onTravellerDataChange }) => 
   const [contactInfo, setContactInfo] = useState({
     email: '',
     phone: '',
-    countryCode: '+91'
+    countryCode: '+84'
   });
 
 
@@ -51,7 +51,7 @@ const TravellerDetailsForm = ({ passengerCount = 1, onTravellerDataChange }) => 
       setContactInfo({
         email: userProfile.email||'',
         phone: userProfile.phone || '',
-        countryCode: '+91'
+        countryCode: '+84'
       });
     }
     console.log("User info set in traveller details:", userProfile);
@@ -342,7 +342,6 @@ const TravellerDetailsForm = ({ passengerCount = 1, onTravellerDataChange }) => 
                 onChange={(e) => handleContactInfoChange('countryCode', e.target.value)}
                 className="w-40 min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               >
-                <option value="+91">India (+91)</option>
                 <option value="+61">Australia (+61)</option>
                 <option value="+33">France (+33)</option>
                 <option value="+81">Japan (+81)</option>

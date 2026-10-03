@@ -128,7 +128,7 @@ const HomePage = () => {
     {
       city: "Tokyo",
       country: "Japan",
-      code: "NRT",
+      code: "HND",
       image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop",
       price: "$38,499"
     }
